@@ -89,23 +89,28 @@ except Exception as e:
 def load_user(user_id):
     """Carrega usuário para o Flask-Login"""
     try:
+        logger.info(f"👤 Carregando usuário: {user_id}")
+        
         if SUPABASE_AVAILABLE:
-            return Usuario.get_by_id(user_id)
-        else:
-            # Usuário mock para desenvolvimento
-            class MockUser:
-                def __init__(self, user_id):
-                    self.id = user_id
-                    self.is_authenticated = True
-                    self.is_active = True
-                    self.is_anonymous = False
-                
-                def get_id(self):
-                    return str(self.id)
-            
-            return MockUser(user_id)
+            # Tentar carregar do Supabase
+            try:
+                user = Usuario.get_by_id(user_id)
+                if user:
+                    logger.info(f"✅ Usuário {user_id} carregado do Supabase")
+                    return user
+            except Exception as e:
+                logger.warning(f"⚠️ Erro ao carregar usuário {user_id} do Supabase: {e}")
+        
+        # Fallback para usuário mock
+        if user_id == 'admin':
+            logger.info(f"✅ Usuário {user_id} carregado como mock")
+            return MockUser('admin', 'admin', 'Administrador')
+        
+        logger.warning(f"❌ Usuário {user_id} não encontrado")
+        return None
+        
     except Exception as e:
-        logger.error(f"Erro ao carregar usuário {user_id}: {e}")
+        logger.error(f"❌ Erro ao carregar usuário {user_id}: {e}")
         return None
 
 def criar_usuario_padrao():
@@ -135,47 +140,34 @@ def criar_usuario_padrao():
     except Exception as e:
         logger.error(f"Erro ao verificar usuário padrão: {e}")
 
+# Classe de usuário mock para Flask-Login
+class MockUser:
+    def __init__(self, user_id, username, nome):
+        self.id = user_id
+        self.username = username
+        self.nome = nome
+        self.is_authenticated = True
+        self.is_active = True
+        self.is_anonymous = False
+    
+    def get_id(self):
+        return str(self.id)
+
 def authenticate_user(username, password):
     """Autentica usuário"""
     try:
-        if SUPABASE_AVAILABLE:
-            # Autenticação real com Supabase
-            if username == 'admin' and password == 'admin123':
-                # Criar usuário mock para Flask-Login
-                class MockUser:
-                    def __init__(self, user_id):
-                        self.id = user_id
-                        self.is_authenticated = True
-                        self.is_active = True
-                        self.is_anonymous = False
-                        self.username = username
-                        self.nome = 'Administrador'
-                    
-                    def get_id(self):
-                        return str(self.id)
-                
-                return MockUser('admin')
-            return None
-        else:
-            # Autenticação mock para desenvolvimento
-            if username == 'admin' and password == 'admin123':
-                # Criar usuário mock para Flask-Login
-                class MockUser:
-                    def __init__(self, user_id):
-                        self.id = user_id
-                        self.is_authenticated = True
-                        self.is_active = True
-                        self.is_anonymous = False
-                        self.username = username
-                        self.nome = 'Administrador'
-                    
-                    def get_id(self):
-                        return str(self.id)
-                
-                return MockUser('admin')
-            return None
+        logger.info(f"🔐 Tentando autenticar usuário: {username}")
+        
+        # Autenticação simples para admin
+        if username == 'admin' and password == 'admin123':
+            logger.info(f"✅ Usuário {username} autenticado com sucesso")
+            return MockUser('admin', 'admin', 'Administrador')
+        
+        logger.warning(f"❌ Falha na autenticação para usuário: {username}")
+        return None
+        
     except Exception as e:
-        logger.error(f"Erro na autenticação: {e}")
+        logger.error(f"❌ Erro na autenticação: {e}")
         return None
 
 def save_image(file):
@@ -489,8 +481,10 @@ def login():
         try:
             user = authenticate_user(username, password)
             if user:
+                logger.info(f"✅ Usuário autenticado: {user.username}")
                 login_user(user)
                 logger.info(f"✅ Login bem-sucedido para usuário: {username}")
+                logger.info(f"🔗 Redirecionando para: {url_for('index')}")
                 flash('Login realizado com sucesso!', 'success')
                 return redirect(url_for('index'))
             else:
