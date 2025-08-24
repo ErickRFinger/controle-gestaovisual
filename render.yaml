@@ -4,7 +4,7 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements_producao.txt
-    startCommand: gunicorn app_producao:app
+    startCommand: python app_producao.py
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.0
@@ -18,3 +18,7 @@ services:
         generateValue: true
       - key: FLASK_ENV
         value: production
+      - key: PORT
+        value: 10000
+      - key: PYTHONPATH
+        value: .

@@ -26,7 +26,7 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB
     
     # Configurações de sessão
-    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_SECURE = False  # Render pode não ter HTTPS
     SESSION_COOKIE_HTTPONLY = True
     SESSION_COOKIE_SAMESITE = 'Lax'
     
