@@ -804,6 +804,7 @@ def novo_produto():
                 'nome': request.form['nome'],
                 'descricao': request.form['descricao'],
                 'preco': float(request.form['preco']),
+                'quantidade': int(request.form.get('quantidade', 0)),  # ADICIONANDO QUANTIDADE!
                 'categoria_id': request.form['categoria_id'],
                 'codigo_barras': request.form['codigo_barras'],
                 'imagem': imagem_filename
@@ -856,6 +857,7 @@ def editar_produto(id):
                     'nome': request.form['nome'],
                     'descricao': request.form['descricao'],
                     'preco': float(request.form['preco']),
+                    'quantidade': int(request.form.get('quantidade', 0)),  # ADICIONANDO QUANTIDADE!
                     'categoria_id': request.form['categoria_id'],
                     'codigo_barras': request.form['codigo_barras'],
                     'imagem': imagem_filename
@@ -1031,6 +1033,7 @@ def estoque():
                                     </td>
                                     <td>
                                         <a href="/produto/editar/{item.get('id')}" class="btn">✏️ Editar</a>
+                                        <button onclick="editarQuantidade('{item.get('id')}', {item.get('quantidade', 0)})" class="btn" style="background: #28a745;">📊 Estoque</button>
                                     </td>
                                 </tr>
                                 ''' for item in estoque_list]) if estoque_list else '<tr><td colspan="8" style="text-align: center; padding: 30px;">Nenhum produto encontrado</td></tr>'}
@@ -1044,6 +1047,42 @@ def estoque():
                         <a href="/vendas" class="btn">💰 Vendas</a>
                         <a href="/logout" class="btn">🚪 Sair</a>
                     </div>
+                    
+                    <!-- Modal para edição rápida de quantidade -->
+                    <div id="modalQuantidade" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+                        <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.3); min-width: 400px;">
+                            <h3 style="margin-bottom: 20px; color: #667eea;">📊 Atualizar Estoque</h3>
+                            <form id="formQuantidade" method="POST">
+                                <div style="margin-bottom: 20px;">
+                                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Quantidade:</label>
+                                    <input type="number" id="inputQuantidade" name="quantidade" min="0" style="width: 100%; padding: 12px; border: 2px solid #dee2e6; border-radius: 8px; font-size: 16px;">
+                                </div>
+                                <div style="text-align: center;">
+                                    <button type="submit" class="btn" style="background: #28a745;">💾 Salvar</button>
+                                    <button type="button" onclick="fecharModal()" class="btn" style="background: #6c757d;">❌ Cancelar</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        function editarQuantidade(id, quantidadeAtual) {
+                            document.getElementById('inputQuantidade').value = quantidadeAtual;
+                            document.getElementById('formQuantidade').action = '/estoque/atualizar/' + id;
+                            document.getElementById('modalQuantidade').style.display = 'block';
+                        }
+                        
+                        function fecharModal() {
+                            document.getElementById('modalQuantidade').style.display = 'none';
+                        }
+                        
+                        // Fechar modal ao clicar fora
+                        document.getElementById('modalQuantidade').addEventListener('click', function(e) {
+                            if (e.target === this) {
+                                fecharModal();
+                            }
+                        });
+                    </script>
                 </div>
             </div>
         </body>
