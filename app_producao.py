@@ -975,208 +975,153 @@ def estoque():
     try:
         logger.info("📊 Acessando rota de estoque")
         
-        # Buscar produtos (que contêm as informações de estoque)
+        # Buscar produtos com suas categorias
         try:
             produtos_list = Produto.get_all()
             logger.info(f"✅ Produtos carregados: {len(produtos_list)} itens")
             
-            # Converter produtos para formato de estoque
-            estoque_list = []
+            # Buscar categorias para cada produto
+            estoque_items = []
             for produto in produtos_list:
+                categoria = None
+                if produto.get('categoria_id'):
+                    try:
+                        categoria = Categoria.get_by_id(produto['categoria_id'])
+                    except:
+                        categoria = {'nome': 'Sem categoria', 'cor': '#6c757d', 'icone': 'bi-tag'}
+                
+                # Criar objeto de estoque baseado no produto
                 estoque_item = {
-                    'id': produto.get('id', ''),
-                    'nome': produto.get('nome', 'Produto'),
-                    'descricao': produto.get('descricao', ''),
+                    'id': produto.get('id'),
                     'quantidade': produto.get('quantidade', 0),
-                    'preco': produto.get('preco', 0.0),
-                    'categoria': produto.get('categoria', 'Sem categoria'),
-                    'imagem': produto.get('imagem', ''),
-                    'codigo_barras': produto.get('codigo_barras', ''),
-                    'status': 'Em estoque' if produto.get('quantidade', 0) > 0 else 'Sem estoque'
+                    'quantidade_minima': produto.get('quantidade_minima', 0),
+                    'localizacao': produto.get('localizacao', ''),
+                    'data_atualizacao': produto.get('updated_at', datetime.now())
                 }
-                estoque_list.append(estoque_item)
+                
+                estoque_items.append((produto, estoque_item, categoria or {'nome': 'Sem categoria', 'cor': '#6c757d', 'icone': 'bi-tag'}))
             
-            logger.info(f"📊 Estoque convertido: {len(estoque_list)} itens")
+            logger.info(f"📊 Estoque processado: {len(estoque_items)} itens")
             
         except Exception as e:
             logger.warning(f"⚠️ Erro ao carregar produtos: {e}")
-            estoque_list = []
+            estoque_items = []
         
-        # Criar HTML inline seguindo o padrão das outras telas
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Estoque - Sistema Empresarial</title>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <style>
-                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
-                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }}
-                .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }}
-                .header {{ background: #667eea; color: white; padding: 30px; text-align: center; }}
-                .header h1 {{ font-size: 2.5em; margin-bottom: 10px; }}
-                .header p {{ font-size: 1.2em; opacity: 0.9; }}
-                .content {{ padding: 30px; }}
-                .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }}
-                .stat-card {{ background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.1); }}
-                .stat-card h3 {{ font-size: 1.3em; margin-bottom: 15px; opacity: 0.9; }}
-                .stat-card .number {{ font-size: 3em; font-weight: bold; margin-bottom: 10px; }}
-                .table-container {{ overflow-x: auto; margin: 30px 0; }}
-                table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }}
-                th, td {{ padding: 15px; text-align: left; border-bottom: 1px solid #dee2e6; }}
-                th {{ background: #667eea; color: white; font-weight: 600; }}
-                tr:hover {{ background: #f8f9fa; }}
-                .btn {{ background: #667eea; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; margin: 10px; display: inline-block; font-weight: 600; transition: all 0.3s ease; }}
-                .btn:hover {{ background: #5a6fd8; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }}
-                .actions {{ text-align: center; margin-top: 30px; background: #f8f9fa; padding: 30px; border-top: 1px solid #dee2e6; }}
-                .produto-imagem {{ width: 50px; height: 50px; object-fit: cover; border-radius: 8px; }}
-                .status-estoque {{ padding: 5px 10px; border-radius: 15px; font-size: 0.9em; font-weight: 600; }}
-                .status-em-estoque {{ background: #d4edda; color: #155724; }}
-                .status-sem-estoque {{ background: #f8d7da; color: #721c24; }}
-            </style>
-        </head>
-        <body>
-            <div class="container">
-                <div class="header">
-                    <h1>📊 Controle de Estoque</h1>
-                    <p>Gerencie o estoque dos seus produtos</p>
-                </div>
-                
-                <div class="content">
-                    <div class="stats">
-                        <div class="stat-card">
-                            <h3>📦 Total de Produtos</h3>
-                            <div class="number">{len(estoque_list)}</div>
-                            <p>Cadastrados</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>✅ Em Estoque</h3>
-                            <div class="number">{len([item for item in estoque_list if item.get('quantidade', 0) > 0])}</div>
-                            <p>Disponíveis</p>
-                        </div>
-                        <div class="stat-card">
-                            <h3>❌ Sem Estoque</h3>
-                            <div class="number">{len([item for item in estoque_list if item.get('quantidade', 0) <= 0])}</div>
-                            <p>Indisponíveis</p>
-                        </div>
-                    </div>
-                    
-                    <div class="table-container">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>Imagem</th>
-                                    <th>Produto</th>
-                                    <th>Descrição</th>
-                                    <th>Quantidade</th>
-                                    <th>Preço</th>
-                                    <th>Categoria</th>
-                                    <th>Status</th>
-                                    <th>Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {''.join([f'''
-                                <tr>
-                                    <td>
-                                        {f'<img src="/uploads/{item.get("imagem")}" class="produto-imagem" alt="{item.get("nome")}">' if item.get('imagem') else '<div class="produto-imagem" style="background: #e9ecef; display: flex; align-items: center; justify-content: center; color: #6c757d;">📦</div>'}
-                                    </td>
-                                    <td><strong>{item.get('nome', 'N/A')}</strong></td>
-                                    <td>{item.get('descricao', 'Sem descrição')[:50]}{'...' if len(item.get('descricao', '')) > 50 else ''}</td>
-                                    <td><strong>{item.get('quantidade', 0)}</strong></td>
-                                    <td><strong>R$ {float(item.get('preco', 0)):.2f}</strong></td>
-                                    <td>{item.get('categoria', 'Sem categoria')}</td>
-                                    <td>
-                                        <span class="status-estoque {'status-em-estoque' if int(item.get('quantidade', 0)) > 0 else 'status-sem-estoque'}">
-                                            {'✅ Em estoque' if int(item.get('quantidade', 0)) > 0 else '❌ Sem estoque'}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <a href="/produto/editar/{item.get('id')}" class="btn" style="background: #28a745;">📊 Editar Estoque</a>
-                                    </td>
-                                </tr>
-                                ''' for item in estoque_list]) if estoque_list else '<tr><td colspan="8" style="text-align: center; padding: 30px;">Nenhum produto encontrado</td></tr>'}
-                            </tbody>
-                        </table>
-                    </div>
-                    
-                    <div class="actions">
-                        <a href="/" class="btn">🏠 Dashboard</a>
-                        <a href="/produtos" class="btn">📦 Gerenciar Produtos</a>
-                        <a href="/vendas" class="btn">💰 Vendas</a>
-                        <a href="/logout" class="btn">🚪 Sair</a>
-                    </div>
-                    
-
-                </div>
-            </div>
-        </body>
-        </html>
-        """
+        return render_template('estoque.html', estoque_items=estoque_items)
         
     except Exception as e:
         logger.error(f"❌ Erro crítico na rota de estoque: {e}")
-        # Página de erro de emergência
-        return f"""
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <title>Erro - Estoque</title>
-            <meta charset="utf-8">
-            <style>
-                body {{ font-family: Arial, sans-serif; margin: 40px; background: #f8f9fa; }}
-                .error-container {{ background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 600px; margin: 0 auto; }}
-                .error-icon {{ font-size: 4em; margin-bottom: 20px; }}
-                .btn {{ background: #667eea; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; margin: 10px; display: inline-block; }}
-            </style>
-        </head>
-        <body>
-            <div class="error-container">
-                <div class="error-icon">⚠️</div>
-                <h1>Erro no Estoque</h1>
-                <p>Ocorreu um erro ao carregar o estoque.</p>
-                <p><strong>Erro:</strong> {e}</p>
-                <hr style="margin: 30px 0;">
-                <a href="/" class="btn">🏠 Dashboard</a>
-                <a href="/teste" class="btn">🧪 Teste</a>
-            </div>
-        </body>
-        </html>
-        """
+        flash(f'Erro ao carregar estoque: {e}', 'error')
+        return render_template('estoque.html', estoque_items=[])
 
-@app.route('/estoque/atualizar/<id>', methods=['POST'])
+@app.route('/estoque/ajustar/<produto_id>', methods=['POST'])
 @login_required
-def atualizar_estoque(id):
-    """Atualiza a quantidade em estoque de um produto"""
+def ajustar_estoque(produto_id):
+    """Ajusta o estoque de um produto"""
     try:
-        logger.info(f"📊 Atualizando estoque do produto {id}")
+        logger.info(f"📊 Ajustando estoque do produto {produto_id}")
         
         quantidade = int(request.form.get('quantidade', 0))
+        quantidade_minima = int(request.form.get('quantidade_minima', 0))
+        localizacao = request.form.get('localizacao', '')
+        
+        # Validar dados
+        if quantidade < 0:
+            flash('Quantidade não pode ser negativa!', 'error')
+            return redirect(url_for('estoque'))
+        
+        if quantidade_minima < 0:
+            flash('Quantidade mínima não pode ser negativa!', 'error')
+            return redirect(url_for('estoque'))
         
         # Buscar produto atual
-        produto = Produto.get_by_id(id)
+        produto = Produto.get_by_id(produto_id)
         if not produto:
             flash('Produto não encontrado!', 'error')
             return redirect(url_for('estoque'))
         
-        # Atualizar quantidade
+        # Preparar dados para atualização
         produto_data = {
-            'quantidade': quantidade
+            'quantidade': quantidade,
+            'quantidade_minima': quantidade_minima,
+            'localizacao': localizacao
         }
         
-        if Produto.update(id, **produto_data):
+        # Atualizar produto
+        if Produto.update(produto_id, **produto_data):
             flash(f'Estoque atualizado com sucesso! Nova quantidade: {quantidade}', 'success')
-            logger.info(f"✅ Estoque do produto {id} atualizado para {quantidade}")
+            logger.info(f"✅ Estoque do produto {produto_id} atualizado para {quantidade}")
         else:
             flash('Erro ao atualizar estoque!', 'error')
-            logger.error(f"❌ Falha ao atualizar estoque do produto {id}")
+            logger.error(f"❌ Falha ao atualizar estoque do produto {produto_id}")
         
         return redirect(url_for('estoque'))
         
     except Exception as e:
-        logger.error(f"❌ Erro ao atualizar estoque: {e}")
-        flash(f'Erro ao atualizar estoque: {e}', 'error')
+        logger.error(f"❌ Erro ao ajustar estoque: {e}")
+        flash(f'Erro ao ajustar estoque: {e}', 'error')
+        return redirect(url_for('estoque'))
+
+@app.route('/estoque/venda-rapida/<produto_id>', methods=['POST'])
+@login_required
+def venda_rapida(produto_id):
+    """Realiza uma venda rápida de um produto"""
+    try:
+        logger.info(f"💰 Venda rápida para produto {produto_id}")
+        
+        quantidade = int(request.form.get('quantidade', 1))
+        
+        # Buscar produto
+        produto = Produto.get_by_id(produto_id)
+        if not produto:
+            flash('Produto não encontrado!', 'error')
+            return redirect(url_for('estoque'))
+        
+        estoque_atual = produto.get('quantidade', 0)
+        
+        # Validar estoque
+        if quantidade > estoque_atual:
+            flash(f'Quantidade solicitada ({quantidade}) excede o estoque disponível ({estoque_atual})!', 'error')
+            return redirect(url_for('estoque'))
+        
+        if quantidade <= 0:
+            flash('Quantidade deve ser maior que zero!', 'error')
+            return redirect(url_for('estoque'))
+        
+        # Calcular novo estoque
+        novo_estoque = estoque_atual - quantidade
+        preco_total = float(produto.get('preco', 0)) * quantidade
+        
+        # Atualizar estoque
+        produto_data = {
+            'quantidade': novo_estoque
+        }
+        
+        if Produto.update(produto_id, **produto_data):
+            # Criar venda
+            venda_data = {
+                'cliente_id': None,  # Venda sem cliente específico
+                'data_venda': datetime.now().isoformat(),
+                'total': preco_total,
+                'status': 'concluida',
+                'tipo': 'venda_rapida'
+            }
+            
+            if Venda.create(**venda_data):
+                flash(f'Venda realizada com sucesso! Total: R$ {preco_total:.2f}', 'success')
+                logger.info(f"✅ Venda rápida realizada para produto {produto_id}, quantidade: {quantidade}")
+            else:
+                flash('Venda realizada, mas erro ao registrar no sistema!', 'warning')
+                logger.warning(f"⚠️ Venda rápida realizada mas erro ao criar registro")
+        else:
+            flash('Erro ao atualizar estoque!', 'error')
+            logger.error(f"❌ Falha ao atualizar estoque para venda rápida")
+        
+        return redirect(url_for('estoque'))
+        
+    except Exception as e:
+        logger.error(f"❌ Erro na venda rápida: {e}")
+        flash(f'Erro na venda rápida: {e}', 'error')
         return redirect(url_for('estoque'))
 
 # Rotas de Vendas
