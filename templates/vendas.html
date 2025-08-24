@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}Vendas - Sistema Empresarial{% endblock %}
+{% block page_title %}Gerenciar Vendas{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bi bi-cart me-2"></i>Histórico de Vendas
+    </h4>
+    <a href="{{ url_for('nova_venda') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Nova Venda
+    </a>
+</div>
+
+<div class="card shadow">
+    <div class="card-body">
+        {% if vendas %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Data/Hora</th>
+                            <th>Cliente</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for venda in vendas %}
+                            <tr>
+                                <td>{{ venda.data_venda.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <strong>{{ venda.cliente.nome }}</strong><br>
+                                    <small class="text-muted">{{ venda.cliente.email }}</small>
+                                </td>
+                                <td>
+                                    <strong class="text-success">R$ {{ "%.2f"|format(venda.total) }}</strong>
+                                </td>
+                                <td>
+                                    <span class="badge bg-success">{{ venda.status }}</span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-outline-info btn-sm" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#vendaModal{{ venda.id }}"
+                                            title="Ver Detalhes">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-cart display-1 text-muted"></i>
+                <h5 class="text-muted mt-3">Nenhuma venda registrada</h5>
+                <p class="text-muted">Registre sua primeira venda para começar!</p>
+                <a href="{{ url_for('nova_venda') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Registrar Venda
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modais para detalhes das vendas -->
+{% for venda in vendas %}
+<div class="modal fade" id="vendaModal{{ venda.id }}" tabindex="-1" aria-labelledby="vendaModalLabel{{ venda.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="vendaModalLabel{{ venda.id }}">
+                    <i class="bi bi-cart me-2"></i>Detalhes da Venda #{{ venda.id }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Informações da Venda</h6>
+                        <p><strong>Data:</strong> {{ venda.data_venda.strftime('%d/%m/%Y %H:%M') }}</p>
+                        <p><strong>Status:</strong> <span class="badge bg-success">{{ venda.status }}</span></p>
+                        <p><strong>Total:</strong> <strong class="text-success">R$ {{ "%.2f"|format(venda.total) }}</strong></p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Informações do Cliente</h6>
+                        <p><strong>Nome:</strong> {{ venda.cliente.nome }}</p>
+                        <p><strong>Email:</strong> {{ venda.cliente.email }}</p>
+                        <p><strong>Telefone:</strong> {{ venda.cliente.telefone }}</p>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <h6 class="text-primary">Itens da Venda</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produto</th>
+                                <th>Quantidade</th>
+                                <th>Preço Unitário</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in venda.itens %}
+                                <tr>
+                                    <td>{{ item.produto.nome }}</td>
+                                    <td>{{ item.quantidade }}</td>
+                                    <td>R$ {{ "%.2f"|format(item.preco_unitario) }}</td>
+                                    <td><strong>R$ {{ "%.2f"|format(item.subtotal) }}</strong></td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="3" class="text-end"><strong>Total:</strong></td>
+                                <td><strong class="text-success">R$ {{ "%.2f"|format(venda.total) }}</strong></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="bi bi-x-circle me-2"></i>Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}

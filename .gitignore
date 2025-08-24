@@ -1,0 +1,73 @@
+# Arquivos de ambiente
+.env
+.env.local
+.env.producao
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+.venv/
+venv/
+ENV/
+env/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+logs/
+debug.log
+
+# Uploads
+static/uploads/
+/tmp/
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# Pastas de build e distribuição
+build/
+dist/
+instance/
+
+# Arquivos de desenvolvimento
+app.py
+app_supabase.py
+app_supabase_debug.py
+config_supabase.py
+requirements.txt
+setup_supabase.py
+teste_cliente.py
+supabase_schema.sql
+README_SUPABASE.md

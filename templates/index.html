@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Sistema Empresarial{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Cards de estatísticas -->
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                            Total de Clientes
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-white">{{ total_clientes }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-people fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                            Total de Produtos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-white">{{ total_produtos }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-box fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                            Total de Vendas
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-white">{{ total_vendas }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-cart fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card stats-card h-100">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-white-50 text-uppercase mb-1">
+                            Produtos em Baixa
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-white">{{ produtos_estoque_baixo|length }}</div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="bi bi-exclamation-triangle fa-2x text-white-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Gráfico de vendas -->
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-graph-up me-2"></i>Vendas por Período
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="vendasChart" width="100%" height="40"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Produtos com estoque baixo -->
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Produtos com Estoque Baixo
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if produtos_estoque_baixo %}
+                    {% for produto, estoque in produtos_estoque_baixo %}
+                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                            <div>
+                                <strong>{{ produto.nome }}</strong><br>
+                                <small class="text-muted">Estoque: {{ estoque.quantidade }}</small>
+                            </div>
+                            <span class="badge bg-warning">Baixo</span>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center">Nenhum produto com estoque baixo</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Últimas vendas -->
+    <div class="col-12">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">
+                    <i class="bi bi-clock-history me-2"></i>Últimas Vendas
+                </h6>
+                <a href="{{ url_for('vendas') }}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-eye me-1"></i>Ver Todas
+                </a>
+            </div>
+            <div class="card-body">
+                {% if ultimas_vendas %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Cliente</th>
+                                    <th>Total</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for venda in ultimas_vendas %}
+                                    <tr>
+                                        <td>{{ venda.data_venda.strftime('%d/%m/%Y %H:%M') }}</td>
+                                        <td>{{ venda.cliente.nome }}</td>
+                                        <td>R$ {{ "%.2f"|format(venda.total) }}</td>
+                                        <td>
+                                            <span class="badge bg-success">{{ venda.status }}</span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted text-center">Nenhuma venda registrada ainda</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+                <!-- Sincronização com Supabase -->
+                <div class="col-lg-6 mb-4">
+                    <div class="card border-primary h-100">
+                        <div class="card-header bg-primary text-white">
+                            <h6 class="mb-0">
+                                <i class="bi bi-arrow-repeat me-2"></i>Sincronização com Supabase
+                            </h6>
+                        </div>
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted">Status:</span>
+                                <span class="badge bg-success" id="sync-status">Ativo</span>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <span class="text-muted">Última sincronização:</span>
+                                <small class="text-muted" id="last-sync">Agora mesmo</small>
+                            </div>
+                            
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('force_sync_route') }}" class="btn btn-outline-primary btn-sm">
+                                    <i class="bi bi-arrow-clockwise me-1"></i>Sincronizar Agora
+                                </a>
+                                <a href="{{ url_for('start_sync_route') }}" class="btn btn-outline-success btn-sm">
+                                    <i class="bi bi-play-circle me-1"></i>Iniciar
+                                </a>
+                                <a href="{{ url_for('stop_sync_route') }}" class="btn btn-outline-warning btn-sm">
+                                    <i class="bi bi-pause-circle me-1"></i>Parar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Gráfico de vendas
+const ctx = document.getElementById('vendasChart').getContext('2d');
+const vendasChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun'],
+        datasets: [{
+            label: 'Vendas (R$)',
+            data: [12000, 19000, 15000, 25000, 22000, 30000],
+            borderColor: '#667eea',
+            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+            tension: 0.4,
+            fill: true
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                display: false
+            }
+        },
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: {
+                    callback: function(value) {
+                        return 'R$ ' + value.toLocaleString('pt-BR');
+                    }
+                }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

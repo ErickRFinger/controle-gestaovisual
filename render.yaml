@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: sistema-empresarial
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements_producao.txt
+    startCommand: gunicorn app_producao:app
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FLASK_ENV
+        value: production

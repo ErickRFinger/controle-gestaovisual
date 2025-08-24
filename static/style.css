@@ -1,0 +1,54 @@
+/* Estilos para o botão de instalação PWA */
+#installButton {
+    animation: fadeIn 0.5s ease-in;
+}
+
+#installApp {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    color: white;
+    font-weight: 600;
+    padding: 8px 16px;
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 10px rgba(102, 126, 234, 0.3);
+}
+
+#installApp:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+    color: white;
+}
+
+#installApp:active {
+    transform: translateY(0);
+}
+
+/* Animação de entrada */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Estilos para PWA instalado */
+.pwa-installed {
+    background-color: #28a745 !important;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    #installButton {
+        margin-right: 10px;
+    }
+    
+    #installApp {
+        font-size: 12px;
+        padding: 6px 12px;
+    }
+}

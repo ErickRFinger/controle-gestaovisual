@@ -1,0 +1,421 @@
+{% extends "base.html" %}
+
+{% block title %}Relatórios - Sistema Empresarial{% endblock %}
+{% block page_title %}Relatórios e Estatísticas{% endblock %}
+
+{% block content %}
+<div class="row">
+    <!-- Filtros -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-funnel me-2"></i>Filtros dos Relatórios
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Período</label>
+                        <select class="form-select" id="periodoFiltro">
+                            <option value="7">Últimos 7 dias</option>
+                            <option value="30" selected>Últimos 30 dias</option>
+                            <option value="90">Últimos 90 dias</option>
+                            <option value="365">Último ano</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Categoria</label>
+                        <select class="form-select" id="categoriaFiltro">
+                            <option value="">Todas as categorias</option>
+                            <option value="Eletrônicos">Eletrônicos</option>
+                            <option value="Vestuário">Vestuário</option>
+                            <option value="Casa e Jardim">Casa e Jardim</option>
+                            <option value="Esportes">Esportes</option>
+                            <option value="Livros">Livros</option>
+                            <option value="Alimentos">Alimentos</option>
+                            <option value="Bebidas">Bebidas</option>
+                            <option value="Higiene">Higiene</option>
+                            <option value="Outros">Outros</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">Status Estoque</label>
+                        <select class="form-select" id="statusEstoqueFiltro">
+                            <option value="">Todos os status</option>
+                            <option value="baixo">Estoque Baixo</option>
+                            <option value="atencao">Atenção</option>
+                            <option value="ok">OK</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">&nbsp;</label>
+                        <button class="btn btn-primary w-100" onclick="atualizarRelatorios()">
+                            <i class="bi bi-arrow-clockwise me-2"></i>Atualizar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Gráficos principais -->
+    <div class="col-xl-8 col-lg-7 mb-4">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-graph-up me-2"></i>Vendas por Período
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="vendasChart" width="100%" height="40"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-5 mb-4">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-pie-chart me-2"></i>Vendas por Categoria
+                </h6>
+            </div>
+            <div class="card-body">
+                <canvas id="categoriaChart" width="100%" height="40"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Estatísticas detalhadas -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-bar-chart me-2"></i>Estatísticas Detalhadas
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Top 5 Produtos Mais Vendidos</h6>
+                        <div id="topProdutos" class="mt-3">
+                            <div class="text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Top 5 Clientes</h6>
+                        <div id="topClientes" class="mt-3">
+                            <div class="text-center py-3">
+                                <div class="spinner-border text-primary" role="status">
+                                    <span class="visually-hidden">Carregando...</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Relatório de estoque -->
+    <div class="col-12 mb-4">
+        <div class="card shadow">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h6 class="mb-0">
+                    <i class="bi bi-archive me-2"></i>Relatório de Estoque
+                </h6>
+                <button class="btn btn-outline-primary btn-sm" onclick="exportarEstoque()">
+                    <i class="bi bi-download me-1"></i>Exportar
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover" id="tabelaEstoque">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Produto</th>
+                                <th>Categoria</th>
+                                <th>Quantidade</th>
+                                <th>Quantidade Mínima</th>
+                                <th>Status</th>
+                                <th>Valor em Estoque</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyEstoque">
+                            <tr>
+                                <td colspan="6" class="text-center py-3">
+                                    <div class="spinner-border text-primary" role="status">
+                                        <span class="visually-hidden">Carregando...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let vendasChart, categoriaChart;
+
+// Inicializar gráficos
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarGraficos();
+    carregarRelatorios();
+});
+
+function inicializarGraficos() {
+    // Gráfico de vendas
+    const ctxVendas = document.getElementById('vendasChart').getContext('2d');
+    vendasChart = new Chart(ctxVendas, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Vendas (R$)',
+                data: [],
+                borderColor: '#667eea',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                tension: 0.4,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toLocaleString('pt-BR');
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Gráfico de categorias
+    const ctxCategoria = document.getElementById('categoriaChart').getContext('2d');
+    categoriaChart = new Chart(ctxCategoria, {
+        type: 'doughnut',
+        data: {
+            labels: [],
+            datasets: [{
+                data: [],
+                backgroundColor: [
+                    '#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe',
+                    '#00f2fe', '#43e97b', '#38f9d7', '#fa709a', '#fee140'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function carregarRelatorios() {
+    carregarDadosVendas();
+    carregarDadosEstoque();
+    carregarTopProdutos();
+    carregarTopClientes();
+}
+
+function carregarDadosVendas() {
+    // Carregar dados reais de vendas por período
+    fetch('/api/relatorio/vendas-periodo')
+        .then(response => response.json())
+        .then(dados => {
+            if (dados.length > 0) {
+                vendasChart.data.labels = dados.map(d => d.data);
+                vendasChart.data.datasets[0].data = dados.map(d => d.valor);
+            } else {
+                vendasChart.data.labels = ['Sem dados'];
+                vendasChart.data.datasets[0].data = [0];
+            }
+            vendasChart.update();
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados de vendas:', error);
+            vendasChart.data.labels = ['Erro'];
+            vendasChart.data.datasets[0].data = [0];
+            vendasChart.update();
+        });
+
+    // Carregar dados reais de vendas por categoria
+    fetch('/api/relatorio/vendas-categoria')
+        .then(response => response.json())
+        .then(dados => {
+            if (dados.length > 0) {
+                categoriaChart.data.labels = dados.map(d => d.categoria);
+                categoriaChart.data.datasets[0].data = dados.map(d => d.valor);
+            } else {
+                categoriaChart.data.labels = ['Sem dados'];
+                categoriaChart.data.datasets[0].data = [0];
+            }
+            categoriaChart.update();
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados de categoria:', error);
+            categoriaChart.data.labels = ['Erro'];
+            categoriaChart.data.datasets[0].data = [0];
+            categoriaChart.update();
+        });
+}
+
+function carregarDadosEstoque() {
+    // Carregar dados reais de estoque
+    fetch('/api/relatorio/estoque')
+        .then(response => response.json())
+        .then(estoqueData => {
+            const tbody = document.getElementById('tbodyEstoque');
+            tbody.innerHTML = '';
+
+            if (estoqueData.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="6" class="text-center text-muted">Nenhum produto em estoque</td>';
+                tbody.appendChild(row);
+                return;
+            }
+
+            estoqueData.forEach(item => {
+                const row = document.createElement('tr');
+                const statusClass = item.status === 'Baixo' ? 'bg-danger' : item.status === 'Atenção' ? 'bg-warning' : 'bg-success';
+                
+                row.innerHTML = `
+                    <td><strong>${item.produto}</strong></td>
+                    <td><span class="badge bg-info">${item.categoria}</span></td>
+                    <td>${item.quantidade}</td>
+                    <td>${item.quantidade_minima}</td>
+                    <td><span class="badge ${statusClass}">${item.status}</span></td>
+                    <td><strong class="text-success">R$ ${item.valor_total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></td>
+                `;
+                tbody.appendChild(row);
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar dados de estoque:', error);
+            const tbody = document.getElementById('tbodyEstoque');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">Erro ao carregar dados</td></tr>';
+        });
+}
+
+function carregarTopProdutos() {
+    fetch('/api/relatorio/top-produtos')
+        .then(response => response.json())
+        .then(topProdutos => {
+            const container = document.getElementById('topProdutos');
+            container.innerHTML = '';
+
+            if (topProdutos.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3">Nenhuma venda registrada</div>';
+                return;
+            }
+
+            topProdutos.forEach((produto, index) => {
+                const item = document.createElement('div');
+                item.className = 'd-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded';
+                item.innerHTML = `
+                    <div>
+                        <span class="badge bg-primary me-2">#${index + 1}</span>
+                        <strong>${produto.nome}</strong><br>
+                        <small class="text-muted">${produto.vendas} vendas</small>
+                    </div>
+                    <span class="text-success">R$ ${produto.receita.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                `;
+                container.appendChild(item);
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar top produtos:', error);
+            const container = document.getElementById('topProdutos');
+            container.innerHTML = '<div class="text-center text-danger py-3">Erro ao carregar dados</div>';
+        });
+}
+
+function carregarTopClientes() {
+    fetch('/api/relatorio/top-clientes')
+        .then(response => response.json())
+        .then(topClientes => {
+            const container = document.getElementById('topClientes');
+            container.innerHTML = '';
+
+            if (topClientes.length === 0) {
+                container.innerHTML = '<div class="text-center text-muted py-3">Nenhuma venda registrada</div>';
+                return;
+            }
+
+            topClientes.forEach((cliente, index) => {
+                const item = document.createElement('div');
+                item.className = 'd-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded';
+                item.innerHTML = `
+                    <div>
+                        <span class="badge bg-success me-2">#${index + 1}</span>
+                        <strong>${cliente.nome}</strong><br>
+                        <small class="text-muted">${cliente.compras} compras</small>
+                    </div>
+                    <span class="text-success">R$ ${cliente.total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                `;
+                container.appendChild(item);
+            });
+        })
+        .catch(error => {
+            console.error('Erro ao carregar top clientes:', error);
+            const container = document.getElementById('topClientes');
+            container.innerHTML = '<div class="text-center text-danger py-3">Erro ao carregar dados</div>';
+        });
+}
+
+function atualizarRelatorios() {
+    // Aqui você pode implementar a lógica para atualizar os relatórios
+    // com base nos filtros selecionados
+    const periodo = document.getElementById('periodoFiltro').value;
+    const categoria = document.getElementById('categoriaFiltro').value;
+    const statusEstoque = document.getElementById('statusEstoqueFiltro').value;
+
+    // Simular atualização
+    carregarRelatorios();
+    
+    // Mostrar mensagem de sucesso
+    const alertDiv = document.createElement('div');
+    alertDiv.className = 'alert alert-success alert-dismissible fade show';
+    alertDiv.innerHTML = `
+        Relatórios atualizados com sucesso!
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.querySelector('.card-body').insertBefore(alertDiv, document.querySelector('.card-body').firstChild);
+    
+    // Remover alerta após 3 segundos
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 3000);
+}
+
+function exportarEstoque() {
+    // Simular exportação (em produção, implementar download real)
+    alert('Funcionalidade de exportação será implementada em breve!');
+}
+</script>
+{% endblock %}

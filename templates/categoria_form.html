@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Editar' if categoria else 'Nova' }} Categoria{% endblock %}
+{% block page_title %}{{ 'Editar' if categoria else 'Nova' }} Categoria{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="bi bi-tag me-2"></i>
+                        {{ 'Editar' if categoria else 'Nova' }} Categoria
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="nome" class="form-label">
+                                    <i class="bi bi-tag me-1"></i>Nome da Categoria
+                                </label>
+                                <input type="text" class="form-control" id="nome" name="nome" 
+                                       value="{{ categoria.nome if categoria else '' }}" required>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="cor" class="form-label">
+                                    <i class="bi bi-palette me-1"></i>Cor
+                                </label>
+                                <input type="color" class="form-control form-control-color" id="cor" name="cor" 
+                                       value="{{ categoria.cor if categoria else '#667eea' }}" 
+                                       style="height: 38px;">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="descricao" class="form-label">
+                                    <i class="bi bi-text-paragraph me-1"></i>Descrição
+                                </label>
+                                <textarea class="form-control" id="descricao" name="descricao" rows="3"
+                                          placeholder="Descrição opcional da categoria">{{ categoria.descricao if categoria else '' }}</textarea>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <label for="icone" class="form-label">
+                                    <i class="bi bi-emoji-smile me-1"></i>Ícone
+                                </label>
+                                <select class="form-select" id="icone" name="icone">
+                                    <option value="bi-tag" {{ 'selected' if categoria and categoria.icone == 'bi-tag' else '' }}>🏷️ Tag</option>
+                                    <option value="bi-box" {{ 'selected' if categoria and categoria.icone == 'bi-box' else '' }}>📦 Caixa</option>
+                                    <option value="bi-phone" {{ 'selected' if categoria and categoria.icone == 'bi-phone' else '' }}>📱 Telefone</option>
+                                    <option value="bi-tshirt" {{ 'selected' if categoria and categoria.icone == 'bi-tshirt' else '' }}>👕 Camiseta</option>
+                                    <option value="bi-house" {{ 'selected' if categoria and categoria.icone == 'bi-house' else '' }}>🏠 Casa</option>
+                                    <option value="bi-trophy" {{ 'selected' if categoria and categoria.icone == 'bi-trophy' else '' }}>🏆 Troféu</option>
+                                    <option value="bi-book" {{ 'selected' if categoria and categoria.icone == 'bi-book' else '' }}>📚 Livro</option>
+                                    <option value="bi-car-front" {{ 'selected' if categoria and categoria.icone == 'bi-car-front' else '' }}>🚗 Carro</option>
+                                    <option value="bi-laptop" {{ 'selected' if categoria and categoria.icone == 'bi-laptop' else '' }}>💻 Laptop</option>
+                                    <option value="bi-headphones" {{ 'selected' if categoria and categoria.icone == 'bi-headphones' else '' }}>🎧 Fones</option>
+                                    <option value="bi-camera" {{ 'selected' if categoria and categoria.icone == 'bi-camera' else '' }}>📷 Câmera</option>
+                                    <option value="bi-gamepad" {{ 'selected' if categoria and categoria.icone == 'bi-gamepad' else '' }}>🎮 Gamepad</option>
+                                    <option value="bi-bicycle" {{ 'selected' if categoria and categoria.icone == 'bi-bicycle' else '' }}>🚲 Bicicleta</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-12">
+                                <div class="d-flex justify-content-between">
+                                    <a href="{{ url_for('categorias') }}" class="btn btn-secondary">
+                                        <i class="bi bi-arrow-left me-1"></i>Voltar
+                                    </a>
+                                    
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="bi bi-check-circle me-1"></i>
+                                        {{ 'Atualizar' if categoria else 'Criar' }} Categoria
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview do ícone -->
+<div class="container-fluid mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="bi bi-eye me-1"></i>Preview da Categoria
+                    </h6>
+                </div>
+                <div class="card-body text-center">
+                    <div class="mb-3">
+                        <div class="rounded-circle d-inline-flex align-items-center justify-content-center" 
+                             id="previewIcon" style="width: 80px; height: 80px; background-color: #667eea;">
+                            <i class="bi bi-tag text-white fs-1" id="previewIconClass"></i>
+                        </div>
+                    </div>
+                    <h5 id="previewNome">Nome da Categoria</h5>
+                    <p class="text-muted" id="previewDescricao">Descrição da categoria</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nomeInput = document.getElementById('nome');
+    const descricaoInput = document.getElementById('descricao');
+    const corInput = document.getElementById('cor');
+    const iconeSelect = document.getElementById('icone');
+    
+    const previewNome = document.getElementById('previewNome');
+    const previewDescricao = document.getElementById('previewDescricao');
+    const previewIcon = document.getElementById('previewIcon');
+    const previewIconClass = document.getElementById('previewIconClass');
+    
+    function updatePreview() {
+        previewNome.textContent = nomeInput.value || 'Nome da Categoria';
+        previewDescricao.textContent = descricaoInput.value || 'Descrição da categoria';
+        previewIcon.style.backgroundColor = corInput.value;
+        previewIconClass.className = `bi ${iconeSelect.value} text-white fs-1`;
+    }
+    
+    nomeInput.addEventListener('input', updatePreview);
+    descricaoInput.addEventListener('input', updatePreview);
+    corInput.addEventListener('input', updatePreview);
+    iconeSelect.addEventListener('change', updatePreview);
+    
+    // Inicializar preview
+    updatePreview();
+});
+</script>
+{% endblock %}

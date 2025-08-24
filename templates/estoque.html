@@ -1,0 +1,266 @@
+{% extends "base.html" %}
+
+{% block title %}Estoque - Sistema Empresarial{% endblock %}
+{% block page_title %}Controle de Estoque{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h4 class="mb-0">
+        <i class="bi bi-archive me-2"></i>Controle de Estoque
+    </h4>
+    <a href="{{ url_for('novo_produto') }}" class="btn btn-primary">
+        <i class="bi bi-plus-circle me-2"></i>Novo Produto
+    </a>
+</div>
+
+<div class="card shadow">
+    <div class="card-body">
+        {% if estoque_items %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Produto</th>
+                            <th>Categoria</th>
+                            <th>Quantidade</th>
+                            <th>Quantidade Mínima</th>
+                            <th>Status</th>
+                            <th>Localização</th>
+                            <th>Última Atualização</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for produto, estoque, categoria in estoque_items %}
+                            <tr class="{% if estoque.quantidade <= estoque.quantidade_minima %}table-warning{% endif %}">
+                                <td>
+                                    <strong>{{ produto.nome }}</strong>
+                                    {% if produto.descricao %}
+                                        <br><small class="text-muted">{{ produto.descricao[:50] }}{% if produto.descricao|length > 50 %}...{% endif %}</small>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge" style="background-color: {{ categoria.cor }};">
+                                        <i class="bi {{ categoria.icone }} me-1"></i>
+                                        {{ categoria.nome }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <span class="badge {% if estoque.quantidade <= estoque.quantidade_minima %}bg-danger{% elif estoque.quantidade <= estoque.quantidade_minima * 2 %}bg-warning{% else %}bg-success{% endif %} fs-6">
+                                        {{ estoque.quantidade }}
+                                    </span>
+                                </td>
+                                <td>{{ estoque.quantidade_minima }}</td>
+                                <td>
+                                    {% if estoque.quantidade <= estoque.quantidade_minima %}
+                                        <span class="badge bg-danger">Estoque Baixo</span>
+                                    {% elif estoque.quantidade <= estoque.quantidade_minima * 2 %}
+                                        <span class="badge bg-warning">Atenção</span>
+                                    {% else %}
+                                        <span class="badge bg-success">OK</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if estoque.localizacao %}
+                                        <code>{{ estoque.localizacao }}</code>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ estoque.data_atualizacao.strftime('%d/%m/%Y %H:%M') }}</td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button class="btn btn-outline-primary btn-sm" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#estoqueModal{{ produto.id }}"
+                                                title="Ajustar Estoque">
+                                            <i class="bi bi-pencil"></i>
+                                        </button>
+                                        
+                                        {% if estoque.quantidade > 0 %}
+                                            <button class="btn btn-success btn-sm" 
+                                                    data-bs-toggle="modal" 
+                                                    data-bs-target="#vendaRapidaModal{{ produto.id }}"
+                                                    title="Venda Rápida">
+                                                <i class="bi bi-cart-plus"></i>
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-secondary btn-sm" disabled 
+                                                    title="Sem estoque para venda">
+                                                <i class="bi bi-cart-x"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="bi bi-archive display-1 text-muted"></i>
+                <h5 class="text-muted mt-3">Nenhum produto em estoque</h5>
+                <p class="text-muted">Cadastre produtos para começar a controlar o estoque!</p>
+                <a href="{{ url_for('novo_produto') }}" class="btn btn-primary">
+                    <i class="bi bi-plus-circle me-2"></i>Cadastrar Produto
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Modais para ajustar estoque -->
+{% for produto, estoque, categoria in estoque_items %}
+<div class="modal fade" id="estoqueModal{{ produto.id }}" tabindex="-1" aria-labelledby="estoqueModalLabel{{ produto.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="estoqueModalLabel{{ produto.id }}">
+                    <i class="bi bi-archive me-2"></i>Ajustar Estoque - {{ produto.nome }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('ajustar_estoque', produto_id=produto.id) }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="quantidade{{ produto.id }}" class="form-label">
+                                <i class="bi bi-boxes me-1"></i>Quantidade em Estoque
+                            </label>
+                            <input type="number" class="form-control" id="quantidade{{ produto.id }}" 
+                                   name="quantidade" min="0" value="{{ estoque.quantidade }}" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="quantidade_minima{{ produto.id }}" class="form-label">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Quantidade Mínima
+                            </label>
+                            <input type="number" class="form-control" id="quantidade_minima{{ produto.id }}" 
+                                   name="quantidade_minima" min="0" value="{{ estoque.quantidade_minima }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="localizacao{{ produto.id }}" class="form-label">
+                            <i class="bi bi-geo-alt me-1"></i>Localização no Estoque
+                        </label>
+                        <input type="text" class="form-control" id="localizacao{{ produto.id }}" 
+                               name="localizacao" placeholder="Ex: Prateleira A1" 
+                               value="{{ estoque.localizacao or '' }}">
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Preço:</strong> R$ {{ "%.2f"|format(produto.preco) }} | 
+                        <strong>Categoria:</strong> 
+                        <span class="badge" style="background-color: {{ categoria.cor }};">
+                            <i class="bi {{ categoria.icone }} me-1"></i>
+                            {{ categoria.nome }}
+                        </span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Modais para venda rápida -->
+{% for produto, estoque, categoria in estoque_items %}
+<div class="modal fade" id="vendaRapidaModal{{ produto.id }}" tabindex="-1" aria-labelledby="vendaRapidaModalLabel{{ produto.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="vendaRapidaModalLabel{{ produto.id }}">
+                    <i class="bi bi-cart-plus me-2"></i>Venda Rápida
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('venda_rapida', produto_id=produto.id) }}">
+                <div class="modal-body">
+                    <div class="text-center mb-3">
+                        <h6 class="text-primary">{{ produto.nome }}</h6>
+                        <p class="text-muted mb-0">Preço: <strong>R$ {{ "%.2f"|format(produto.preco) }}</strong></p>
+                        <p class="text-muted">Estoque disponível: <strong>{{ estoque.quantidade }}</strong></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="quantidade{{ produto.id }}" class="form-label">Quantidade</label>
+                        <input type="number" class="form-control" id="quantidade{{ produto.id }}" 
+                               name="quantidade" min="1" max="{{ estoque.quantidade }}" 
+                               value="1" required>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Total da venda:</strong> 
+                        <span id="totalVenda{{ produto.id }}">R$ {{ "%.2f"|format(produto.preco) }}</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-cart-check me-1"></i>Confirmar Venda
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Calcular total da venda em tempo real
+{% for produto, estoque, categoria in estoque_items %}
+document.getElementById('quantidade{{ produto.id }}').addEventListener('input', function() {
+    const quantidade = parseInt(this.value) || 0;
+    const preco = {{ produto.preco }};
+    const total = quantidade * preco;
+    document.getElementById('totalVenda{{ produto.id }}').textContent = 'R$ ' + total.toFixed(2);
+});
+{% endfor %}
+
+// Validação dos modais
+document.querySelectorAll('[id^="quantidade_minima"]').forEach(function(element) {
+    element.addEventListener('input', function() {
+        let produtoId = this.id.replace('quantidade_minima', '');
+        let quantidade = parseInt(document.getElementById('quantidade' + produtoId).value) || 0;
+        let quantidadeMinima = parseInt(this.value) || 0;
+        
+        if (quantidadeMinima > quantidade) {
+            this.setCustomValidity('A quantidade mínima não pode ser maior que a quantidade em estoque');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+});
+
+document.querySelectorAll('[id^="quantidade"]').forEach(function(element) {
+    if (!element.id.includes('quantidade_minima')) {
+        element.addEventListener('input', function() {
+            let produtoId = this.id.replace('quantidade', '');
+            let quantidade = parseInt(this.value) || 0;
+            let quantidadeMinima = parseInt(document.getElementById('quantidade_minima' + produtoId).value) || 0;
+            
+            if (quantidade < quantidadeMinima) {
+                document.getElementById('quantidade_minima' + produtoId).setCustomValidity('A quantidade mínima não pode ser maior que a quantidade em estoque');
+            } else {
+                document.getElementById('quantidade_minima' + produtoId).setCustomValidity('');
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

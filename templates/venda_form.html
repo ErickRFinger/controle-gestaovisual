@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Venda - Sistema Empresarial{% endblock %}
+{% block page_title %}Registrar Nova Venda{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-cart-plus me-2"></i>Registrar Nova Venda
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" id="vendaForm">
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="cliente_id" class="form-label">
+                                <i class="bi bi-person me-1"></i>Cliente *
+                            </label>
+                            <select class="form-select" id="cliente_id" name="cliente_id" required>
+                                <option value="">Selecione um cliente...</option>
+                                {% for cliente in clientes %}
+                                    <option value="{{ cliente.id }}">{{ cliente.nome }} - {{ cliente.email }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label">
+                                <i class="bi bi-calendar me-1"></i>Data da Venda
+                            </label>
+                            <input type="text" class="form-control" value="{{ now.strftime('%d/%m/%Y %H:%M') }}" readonly>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="text-primary mb-0">
+                            <i class="bi bi-box me-2"></i>Produtos da Venda
+                        </h6>
+                        <button type="button" class="btn btn-success btn-sm" onclick="adicionarProduto()">
+                            <i class="bi bi-plus-circle me-1"></i>Adicionar Produto
+                        </button>
+                    </div>
+
+                    <div id="produtosContainer">
+                        <div class="row produto-item mb-3" data-index="0">
+                            <div class="col-md-4">
+                                <label class="form-label">Produto *</label>
+                                <select class="form-select produto-select" name="produto_id[]" required onchange="atualizarPreco(this, 0)">
+                                    <option value="">Selecione um produto...</option>
+                                    {% for produto in produtos %}
+                                        <option value="{{ produto.id }}" data-preco="{{ produto.preco }}" data-estoque="{{ produto.estoque.quantidade if produto.estoque else 0 }}">
+                                            {{ produto.nome }} - R$ {{ "%.2f"|format(produto.preco) }} (Estoque: {{ produto.estoque.quantidade if produto.estoque else 0 }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <label class="form-label">Quantidade *</label>
+                                <input type="number" class="form-control quantidade-input" name="quantidade[]" 
+                                       min="1" value="1" required onchange="calcularSubtotal(0)" onkeyup="calcularSubtotal(0)">
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <label class="form-label">Preço Unit.</label>
+                                <input type="text" class="form-control preco-unitario" readonly>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <label class="form-label">Subtotal</label>
+                                <input type="text" class="form-control subtotal" readonly>
+                            </div>
+                            
+                            <div class="col-md-2">
+                                <label class="form-label">&nbsp;</label>
+                                <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removerProduto(this)">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4">
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Dica:</strong> Selecione o cliente e adicione os produtos desejados. 
+                                O sistema calculará automaticamente o total da venda.
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body text-center">
+                                    <h4 class="text-success mb-0">
+                                        Total da Venda: <span id="totalVenda">R$ 0,00</span>
+                                    </h4>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('vendas') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn btn-primary" id="btnFinalizar" disabled>
+                            <i class="bi bi-check-circle me-2"></i>Finalizar Venda
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let produtoIndex = 1;
+
+function adicionarProduto() {
+    const container = document.getElementById('produtosContainer');
+    const newRow = document.createElement('div');
+    newRow.className = 'row produto-item mb-3';
+    newRow.setAttribute('data-index', produtoIndex);
+    
+    newRow.innerHTML = `
+        <div class="col-md-4">
+            <label class="form-label">Produto *</label>
+            <select class="form-select produto-select" name="produto_id[]" required onchange="atualizarPreco(this, ${produtoIndex})">
+                <option value="">Selecione um produto...</option>
+                {% for produto in produtos %}
+                    <option value="{{ produto.id }}" data-preco="{{ produto.preco }}" data-estoque="{{ produto.estoque.quantidade if produto.estoque else 0 }}">
+                        {{ produto.nome }} - R$ {{ "%.2f"|format(produto.preco) }} (Estoque: {{ produto.estoque.quantidade if produto.estoque else 0 }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        
+        <div class="col-md-2">
+            <label class="form-label">Quantidade *</label>
+            <input type="number" class="form-control quantidade-input" name="quantidade[]" 
+                   min="1" value="1" required onchange="calcularSubtotal(${produtoIndex})" onkeyup="calcularSubtotal(${produtoIndex})">
+        </div>
+        
+        <div class="col-md-2">
+            <label class="form-label">Preço Unit.</label>
+            <input type="text" class="form-control preco-unitario" readonly>
+        </div>
+        
+        <div class="col-md-2">
+            <label class="form-label">Subtotal</label>
+            <input type="text" class="form-control subtotal" readonly>
+        </div>
+        
+        <div class="col-md-2">
+            <label class="form-label">&nbsp;</label>
+            <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="removerProduto(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    
+    container.appendChild(newRow);
+    produtoIndex++;
+}
+
+function removerProduto(button) {
+    if (document.querySelectorAll('.produto-item').length > 1) {
+        button.closest('.produto-item').remove();
+        calcularTotal();
+    }
+}
+
+function atualizarPreco(select, index) {
+    const option = select.options[select.selectedIndex];
+    const preco = option.getAttribute('data-preco');
+    const estoque = option.getAttribute('data-estoque');
+    
+    const row = select.closest('.produto-item');
+    const precoInput = row.querySelector('.preco-unitario');
+    const quantidadeInput = row.querySelector('.quantidade-input');
+    
+    if (preco) {
+        precoInput.value = `R$ ${parseFloat(preco).toFixed(2)}`;
+        quantidadeInput.max = estoque;
+        calcularSubtotal(index);
+    } else {
+        precoInput.value = '';
+        quantidadeInput.max = '';
+    }
+}
+
+function calcularSubtotal(index) {
+    const row = document.querySelector(`[data-index="${index}"]`);
+    const precoInput = row.querySelector('.preco-unitario');
+    const quantidadeInput = row.querySelector('.quantidade-input');
+    const subtotalInput = row.querySelector('.subtotal');
+    
+    const preco = parseFloat(precoInput.value.replace('R$ ', '')) || 0;
+    const quantidade = parseInt(quantidadeInput.value) || 0;
+    
+    if (preco && quantidade) {
+        const subtotal = preco * quantidade;
+        subtotalInput.value = `R$ ${subtotal.toFixed(2)}`;
+        calcularTotal();
+    } else {
+        subtotalInput.value = '';
+        calcularTotal();
+    }
+}
+
+function calcularTotal() {
+    let total = 0;
+    const subtotais = document.querySelectorAll('.subtotal');
+    
+    subtotais.forEach(input => {
+        const valor = parseFloat(input.value.replace('R$ ', '')) || 0;
+        total += valor;
+    });
+    
+    document.getElementById('totalVenda').textContent = `R$ ${total.toFixed(2)}`;
+    
+    // Habilitar/desabilitar botão de finalizar
+    const btnFinalizar = document.getElementById('btnFinalizar');
+    const clienteSelecionado = document.getElementById('cliente_id').value;
+    const produtosValidos = Array.from(document.querySelectorAll('.produto-select')).some(select => select.value);
+    
+    btnFinalizar.disabled = !clienteSelecionado || !produtosValidos || total === 0;
+}
+
+// Validação do formulário
+document.getElementById('vendaForm').addEventListener('submit', function(e) {
+    const cliente = document.getElementById('cliente_id').value;
+    const produtos = document.querySelectorAll('.produto-select');
+    let produtosValidos = 0;
+    
+    produtos.forEach(select => {
+        if (select.value) produtosValidos++;
+    });
+    
+    if (!cliente) {
+        e.preventDefault();
+        alert('Selecione um cliente para a venda.');
+        return;
+    }
+    
+    if (produtosValidos === 0) {
+        e.preventDefault();
+        alert('Adicione pelo menos um produto à venda.');
+        return;
+    }
+    
+    // Verificar se todos os produtos selecionados têm quantidade
+    let todosValidos = true;
+    produtos.forEach(select => {
+        if (select.value) {
+            const row = select.closest('.produto-item');
+            const quantidade = row.querySelector('.quantidade-input').value;
+            if (!quantidade || quantidade < 1) {
+                todosValidos = false;
+            }
+        }
+    });
+    
+    if (!todosValidos) {
+        e.preventDefault();
+        alert('Preencha a quantidade para todos os produtos selecionados.');
+        return;
+    }
+});
+
+// Inicializar cálculos
+document.addEventListener('DOMContentLoaded', function() {
+    calcularTotal();
+});
+</script>
+{% endblock %}

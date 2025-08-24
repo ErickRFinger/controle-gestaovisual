@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if cliente %}Editar Cliente{% else %}Novo Cliente{% endif %} - Sistema Empresarial
+{% endblock %}
+
+{% block page_title %}
+    {% if cliente %}Editar Cliente{% else %}Novo Cliente{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-person-plus me-2"></i>
+                    {% if cliente %}Editar Cliente{% else %}Cadastrar Novo Cliente{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="nome" class="form-label">
+                                <i class="bi bi-person me-1"></i>Nome Completo *
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   value="{{ cliente.nome if cliente else '' }}" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="email" class="form-label">
+                                <i class="bi bi-envelope me-1"></i>Email *
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   value="{{ cliente.email if cliente else '' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="telefone" class="form-label">
+                                <i class="bi bi-telephone me-1"></i>Telefone *
+                            </label>
+                            <input type="tel" class="form-control" id="telefone" name="telefone" 
+                                   value="{{ cliente.telefone if cliente else '' }}" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="cpf_cnpj" class="form-label">
+                                <i class="bi bi-card-text me-1"></i>CPF/CNPJ *
+                            </label>
+                            <input type="text" class="form-control" id="cpf_cnpj" name="cpf_cnpj" 
+                                   value="{{ cliente.cpf_cnpj if cliente else '' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="endereco" class="form-label">
+                            <i class="bi bi-geo-alt me-1"></i>Endereço Completo *
+                        </label>
+                        <textarea class="form-control" id="endereco" name="endereco" rows="2" required>{{ cliente.endereco if cliente else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="cidade" class="form-label">
+                                <i class="bi bi-building me-1"></i>Cidade *
+                            </label>
+                            <input type="text" class="form-control" id="cidade" name="cidade" 
+                                   value="{{ cliente.cidade if cliente else '' }}" required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="estado" class="form-label">
+                                <i class="bi bi-geo-alt me-1"></i>Estado *
+                            </label>
+                            <select class="form-select" id="estado" name="estado" required>
+                                <option value="">Selecione...</option>
+                                <option value="AC" {% if cliente and cliente.estado == 'AC' %}selected{% endif %}>Acre</option>
+                                <option value="AL" {% if cliente and cliente.estado == 'AL' %}selected{% endif %}>Alagoas</option>
+                                <option value="AP" {% if cliente and cliente.estado == 'AP' %}selected{% endif %}>Amapá</option>
+                                <option value="AM" {% if cliente and cliente.estado == 'AM' %}selected{% endif %}>Amazonas</option>
+                                <option value="BA" {% if cliente and cliente.estado == 'BA' %}selected{% endif %}>Bahia</option>
+                                <option value="CE" {% if cliente and cliente.estado == 'CE' %}selected{% endif %}>Ceará</option>
+                                <option value="DF" {% if cliente and cliente.estado == 'DF' %}selected{% endif %}>Distrito Federal</option>
+                                <option value="ES" {% if cliente and cliente.estado == 'ES' %}selected{% endif %}>Espírito Santo</option>
+                                <option value="GO" {% if cliente and cliente.estado == 'GO' %}selected{% endif %}>Goiás</option>
+                                <option value="MA" {% if cliente and cliente.estado == 'MA' %}selected{% endif %}>Maranhão</option>
+                                <option value="MT" {% if cliente and cliente.estado == 'MT' %}selected{% endif %}>Mato Grosso</option>
+                                <option value="MS" {% if cliente and cliente.estado == 'MS' %}selected{% endif %}>Mato Grosso do Sul</option>
+                                <option value="MG" {% if cliente and cliente.estado == 'MG' %}selected{% endif %}>Minas Gerais</option>
+                                <option value="PA" {% if cliente and cliente.estado == 'PA' %}selected{% endif %}>Pará</option>
+                                <option value="PB" {% if cliente and cliente.estado == 'PB' %}selected{% endif %}>Paraíba</option>
+                                <option value="PR" {% if cliente and cliente.estado == 'PR' %}selected{% endif %}>Paraná</option>
+                                <option value="PE" {% if cliente and cliente.estado == 'PE' %}selected{% endif %}>Pernambuco</option>
+                                <option value="PI" {% if cliente and cliente.estado == 'PI' %}selected{% endif %}>Piauí</option>
+                                <option value="RJ" {% if cliente and cliente.estado == 'RJ' %}selected{% endif %}>Rio de Janeiro</option>
+                                <option value="RN" {% if cliente and cliente.estado == 'RN' %}selected{% endif %}>Rio Grande do Norte</option>
+                                <option value="RS" {% if cliente and cliente.estado == 'RS' %}selected{% endif %}>Rio Grande do Sul</option>
+                                <option value="RO" {% if cliente and cliente.estado == 'RO' %}selected{% endif %}>Rondônia</option>
+                                <option value="RR" {% if cliente and cliente.estado == 'RR' %}selected{% endif %}>Roraima</option>
+                                <option value="SC" {% if cliente and cliente.estado == 'SC' %}selected{% endif %}>Santa Catarina</option>
+                                <option value="SP" {% if cliente and cliente.estado == 'SP' %}selected{% endif %}>São Paulo</option>
+                                <option value="SE" {% if cliente and cliente.estado == 'SE' %}selected{% endif %}>Sergipe</option>
+                                <option value="TO" {% if cliente and cliente.estado == 'TO' %}selected{% endif %}>Tocantins</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="cep" class="form-label">
+                                <i class="bi bi-geo-alt me-1"></i>CEP *
+                            </label>
+                            <input type="text" class="form-control" id="cep" name="cep" 
+                                   value="{{ cliente.cep if cliente else '' }}" required>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('clientes') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            {% if cliente %}Atualizar{% else %}Cadastrar{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Máscara para telefone
+document.getElementById('telefone').addEventListener('input', function (e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+        if (value.length <= 2) {
+            value = `(${value}`;
+        } else if (value.length <= 6) {
+            value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+        } else if (value.length <= 10) {
+            value = `(${value.slice(0, 2)}) ${value.slice(2, 6)}-${value.slice(6)}`;
+        } else {
+            value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7)}`;
+        }
+    }
+    e.target.value = value;
+});
+
+// Máscara para CEP
+document.getElementById('cep').addEventListener('input', function (e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 8) {
+        value = value.replace(/^(\d{5})(\d{3})/, '$1-$2');
+    }
+    e.target.value = value;
+});
+
+// Máscara para CPF/CNPJ
+document.getElementById('cpf_cnpj').addEventListener('input', function (e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 11) {
+        // CPF
+        value = value.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    } else if (value.length <= 14) {
+        // CNPJ
+        value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5');
+    }
+    e.target.value = value;
+});
+</script>
+{% endblock %}

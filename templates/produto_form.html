@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}
+    {% if produto %}Editar Produto{% else %}Novo Produto{% endif %} - Sistema Empresarial
+{% endblock %}
+
+{% block page_title %}
+    {% if produto %}Editar Produto{% else %}Novo Produto{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-box me-2"></i>
+                    {% if produto %}Editar Produto{% else %}Cadastrar Novo Produto{% endif %}
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label for="nome" class="form-label">
+                                <i class="bi bi-box me-1"></i>Nome do Produto *
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" 
+                                   value="{{ produto.nome if produto else '' }}" required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="categoria_id" class="form-label">
+                                <i class="bi bi-tags me-1"></i>Categoria *
+                            </label>
+                            <select class="form-select" id="categoria_id" name="categoria_id" required>
+                                <option value="">Selecione uma categoria</option>
+                                {% for categoria in categorias %}
+                                    <option value="{{ categoria.id }}" 
+                                            {{ 'selected' if produto and produto.categoria_id == categoria.id else '' }}
+                                            data-cor="{{ categoria.cor }}"
+                                            data-icone="{{ categoria.icone }}">
+                                        <i class="bi {{ categoria.icone }}"></i> {{ categoria.nome }}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="descricao" class="form-label">
+                            <i class="bi bi-text-paragraph me-1"></i>Descrição
+                        </label>
+                        <textarea class="form-control" id="descricao" name="descricao" rows="3">{{ produto.descricao if produto else '' }}</textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="preco" class="form-label">
+                                <i class="bi bi-currency-dollar me-1"></i>Preço (R$) *
+                            </label>
+                            <input type="number" class="form-control" id="preco" name="preco" 
+                                   step="0.01" min="0" 
+                                   value="{{ "%.2f"|format(produto.preco) if produto else '' }}" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="codigo_barras" class="form-label">
+                                <i class="bi bi-upc-scan me-1"></i>Código de Barras
+                            </label>
+                            <input type="text" class="form-control" id="codigo_barras" name="codigo_barras" 
+                                   value="{{ produto.codigo_barras if produto else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="imagem" class="form-label">
+                                <i class="bi bi-image me-1"></i>Imagem do Produto
+                            </label>
+                            <input type="file" class="form-control" id="imagem" name="imagem" 
+                                   accept="image/png,image/jpg,image/jpeg,image/gif,image/webp">
+                            <div class="form-text">
+                                Formatos suportados: PNG, JPG, JPEG, GIF, WEBP (máximo 16MB)
+                            </div>
+                        </div>
+                        {% if produto and produto.imagem %}
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Imagem Atual</label>
+                            <div class="text-center">
+                                <img src="{{ url_for('uploaded_file', filename=produto.imagem) }}" 
+                                     alt="{{ produto.nome }}" 
+                                     class="img-thumbnail" 
+                                     style="max-width: 150px; max-height: 150px;">
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <hr class="my-4">
+                    <h6 class="text-primary">
+                        <i class="bi bi-archive me-2"></i>Informações de Estoque
+                    </h6>
+
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label for="quantidade" class="form-label">
+                                <i class="bi bi-boxes me-1"></i>Quantidade em Estoque *
+                            </label>
+                            <input type="number" class="form-control" id="quantidade" name="quantidade" 
+                                   min="0" 
+                                   value="{{ estoque.quantidade if estoque else '0' }}" required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="quantidade_minima" class="form-label">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Quantidade Mínima *
+                            </label>
+                            <input type="number" class="form-control" id="quantidade_minima" name="quantidade_minima" 
+                                   min="0" 
+                                   value="{{ estoque.quantidade_minima if estoque else '0' }}" required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label for="localizacao" class="form-label">
+                                <i class="bi bi-geo-alt me-1"></i>Localização no Estoque
+                            </label>
+                            <input type="text" class="form-control" id="localizacao" name="localizacao" 
+                                   placeholder="Ex: Prateleira A1" 
+                                   value="{{ estoque.localizacao if estoque else '' }}">
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('produtos') }}" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left me-2"></i>Voltar
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-circle me-2"></i>
+                            {% if produto %}Atualizar{% else %}Cadastrar{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Máscara para preço
+document.getElementById('preco').addEventListener('input', function (e) {
+    let value = e.target.value;
+    if (value && !isNaN(value)) {
+        e.target.value = parseFloat(value).toFixed(2);
+    }
+});
+
+// Validação de quantidade mínima
+document.getElementById('quantidade_minima').addEventListener('input', function (e) {
+    let quantidade = parseInt(document.getElementById('quantidade').value) || 0;
+    let quantidadeMinima = parseInt(e.target.value) || 0;
+    
+    if (quantidadeMinima > quantidade) {
+        e.target.setCustomValidity('A quantidade mínima não pode ser maior que a quantidade em estoque');
+    } else {
+        e.target.setCustomValidity('');
+    }
+});
+
+// Validação de quantidade
+document.getElementById('quantidade').addEventListener('input', function (e) {
+    let quantidade = parseInt(e.target.value) || 0;
+    let quantidadeMinima = parseInt(document.getElementById('quantidade_minima').value) || 0;
+    
+    if (quantidade < quantidadeMinima) {
+        document.getElementById('quantidade_minima').setCustomValidity('A quantidade mínima não pode ser maior que a quantidade em estoque');
+    } else {
+        document.getElementById('quantidade_minima').setCustomValidity('');
+    }
+});
+</script>
+{% endblock %}
