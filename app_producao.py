@@ -916,6 +916,7 @@ def estoque():
         try:
             estoque_list = Estoque.get_all()
             logger.info(f"✅ Estoque carregado: {len(estoque_list)} itens")
+            logger.info(f"📋 Dados do estoque: {estoque_list}")
         except Exception as e:
             logger.warning(f"⚠️ Erro ao carregar estoque do Supabase: {e}")
             estoque_list = []
@@ -924,9 +925,27 @@ def estoque():
         try:
             produtos_list = Produto.get_all()
             logger.info(f"✅ Produtos carregados: {len(produtos_list)} itens")
+            logger.info(f"📋 Dados dos produtos: {produtos_list}")
         except Exception as e:
             logger.warning(f"⚠️ Erro ao carregar produtos: {e}")
             produtos_list = []
+        
+        # Se não há estoque, mostrar produtos como estoque
+        if not estoque_list and produtos_list:
+            logger.info("🔄 Convertendo produtos para estoque")
+            estoque_list = []
+            for produto in produtos_list:
+                estoque_item = {
+                    'id': produto.get('id', ''),
+                    'nome': produto.get('nome', 'Produto'),
+                    'quantidade': produto.get('quantidade', 0),
+                    'preco': produto.get('preco', 0.0),
+                    'categoria': produto.get('categoria', 'Sem categoria'),
+                    'status': 'Em estoque' if produto.get('quantidade', 0) > 0 else 'Sem estoque'
+                }
+                estoque_list.append(estoque_item)
+        
+        logger.info(f"📊 Total de itens para exibir: {len(estoque_list)}")
         
         # Criar HTML inline para evitar problemas de template
         return f"""
@@ -953,6 +972,7 @@ def estoque():
                 .btn {{ background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; margin: 5px; display: inline-block; }}
                 .btn:hover {{ background: #5a6fd8; }}
                 .actions {{ text-align: center; margin-top: 30px; }}
+                .debug {{ background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0; font-family: monospace; font-size: 12px; }}
             </style>
         </head>
         <body>
@@ -974,6 +994,10 @@ def estoque():
                         </div>
                     </div>
                     
+                    <div class="debug">
+                        <strong>Debug:</strong> Produtos: {len(produtos_list)}, Estoque: {len(estoque_list)}
+                    </div>
+                    
                     <div class="table-container">
                         <table>
                             <thead>
@@ -981,6 +1005,7 @@ def estoque():
                                     <th>Produto</th>
                                     <th>Quantidade</th>
                                     <th>Preço</th>
+                                    <th>Categoria</th>
                                     <th>Status</th>
                                 </tr>
                             </thead>
@@ -989,10 +1014,11 @@ def estoque():
                                 <tr>
                                     <td>{item.get('nome', 'N/A')}</td>
                                     <td>{item.get('quantidade', 0)}</td>
-                                    <td>R$ {item.get('preco', 0):.2f}</td>
-                                    <td>{'✅ Em estoque' if item.get('quantidade', 0) > 0 else '❌ Sem estoque'}</td>
+                                    <td>R$ {float(item.get('preco', 0)):.2f}</td>
+                                    <td>{item.get('categoria', 'N/A')}</td>
+                                    <td>{'✅ Em estoque' if int(item.get('quantidade', 0)) > 0 else '❌ Sem estoque'}</td>
                                 </tr>
-                                ''' for item in estoque_list[:10]]) if estoque_list else '<tr><td colspan="4" style="text-align: center; padding: 30px;">Nenhum item em estoque encontrado</td></tr>'}
+                                ''' for item in estoque_list]) if estoque_list else '<tr><td colspan="5" style="text-align: center; padding: 30px;">Nenhum item em estoque encontrado</td></tr>'}
                             </tbody>
                         </table>
                     </div>
