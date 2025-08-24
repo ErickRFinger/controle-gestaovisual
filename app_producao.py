@@ -51,12 +51,19 @@ SUPABASE_AVAILABLE = False
 
 # Importações com tratamento de erro robusto
 try:
-    from config_producao import config
+    from config_render import get_config
+    config = get_config()
     app.config.from_object(config)
-    logger.info("✅ Configurações carregadas com sucesso")
+    logger.info("✅ Configurações do Render carregadas com sucesso")
 except Exception as e:
-    logger.warning(f"⚠️ Erro ao carregar configurações: {e}")
-    logger.info("🔄 Usando configurações padrão")
+    logger.warning(f"⚠️ Erro ao carregar configurações do Render: {e}")
+    try:
+        from config_producao import config
+        app.config.from_object(config)
+        logger.info("✅ Configurações de produção carregadas com sucesso")
+    except Exception as e2:
+        logger.warning(f"⚠️ Erro ao carregar configurações de produção: {e2}")
+        logger.info("🔄 Usando configurações padrão")
 
 try:
     from models_supabase import Usuario, Cliente, Categoria, Produto, Estoque, Venda, ItemVenda
@@ -91,24 +98,38 @@ except Exception as e:
 
 @login_manager.user_loader
 def load_user(user_id):
-    """Carrega usuário para o Flask-Login"""
+    """Carrega usuário para o Flask-Login com Supabase integrado"""
     try:
         logger.info(f"👤 Carregando usuário: {user_id}")
         
         if SUPABASE_AVAILABLE:
             # Tentar carregar do Supabase
             try:
-                user = Usuario.get_by_id(user_id)
-                if user:
-                    logger.info(f"✅ Usuário {user_id} carregado do Supabase")
-                    return user
+                usuarios = Usuario.get_all()
+                for usuario in usuarios:
+                    if usuario.get('id') == user_id and usuario.get('ativo', True):
+                        logger.info(f"✅ Usuário {user_id} carregado do Supabase")
+                        
+                        # Criar objeto MockUser para Flask-Login
+                        username = usuario.get('username', 'unknown')
+                        nome = usuario.get('nome', username)
+                        
+                        if username == 'erick':
+                            return MockUser(usuario['id'], username, 'Erick Finger - Admin Máximo')
+                        else:
+                            return MockUser(usuario['id'], username, nome)
+                            
             except Exception as e:
                 logger.warning(f"⚠️ Erro ao carregar usuário {user_id} do Supabase: {e}")
         
-        # Fallback para usuário mock
+        # Fallback para usuários mock locais
         if user_id == 'admin':
-            logger.info(f"✅ Usuário {user_id} carregado como mock")
+            logger.info(f"✅ Usuário {user_id} carregado como mock local")
             return MockUser('admin', 'admin', 'Administrador')
+        
+        if user_id == 'erick':
+            logger.info(f"✅ Usuário {user_id} carregado como mock local")
+            return MockUser('erick', 'erick', 'Erick Finger - Admin Máximo')
         
         logger.warning(f"❌ Usuário {user_id} não encontrado")
         return None
@@ -118,18 +139,44 @@ def load_user(user_id):
         return None
 
 def criar_usuario_padrao():
-    """Cria usuário padrão se não existir"""
+    """Cria usuário padrão se não existir, verificando também o usuário erick"""
     try:
         if SUPABASE_AVAILABLE:
             usuarios = Usuario.get_all()
-            if not usuarios:
-                logger.info("Criando usuário padrão...")
+            usuarios_existentes = [u.get('username') for u in usuarios]
+            
+            logger.info(f"📊 Usuários existentes: {usuarios_existentes}")
+            
+            # Verificar se o usuário erick já existe
+            if 'erick' in usuarios_existentes:
+                logger.info("✅ Usuário erick já existe no sistema")
+            else:
+                logger.warning("⚠️ Usuário erick não encontrado - será criado automaticamente")
+                
+                # Criar usuário erick automaticamente
+                usuario_erick = {
+                    'username': 'erick',
+                    'password': '21324354',
+                    'nome': 'Erick Finger',
+                    'email': 'erick@sistema.com',
+                    'cargo': 'Admin Máximo',
+                    'ativo': True
+                }
+                
+                if Usuario.create(**usuario_erick):
+                    logger.info("✅ Usuário erick criado automaticamente!")
+                else:
+                    logger.error("❌ Falha ao criar usuário erick automaticamente")
+            
+            # Verificar se o usuário admin padrão já existe
+            if 'admin' not in usuarios_existentes:
+                logger.info("Criando usuário admin padrão...")
                 usuario_padrao = {
                     'username': 'admin',
                     'password': 'admin123',  # Senha padrão - ALTERE EM PRODUÇÃO!
                     'nome': 'Administrador',
                     'email': 'admin@sistema.com',
-                    'tipo': 'admin'
+                    'cargo': 'Administrador'
                 }
                 
                 if Usuario.create(**usuario_padrao):
@@ -138,11 +185,12 @@ def criar_usuario_padrao():
                 else:
                     logger.error("❌ Falha ao criar usuário padrão!")
             else:
-                logger.info("Usuários já existem no sistema")
+                logger.info("✅ Usuário admin já existe no sistema")
+                
         else:
-            logger.info("⚠️ Supabase não disponível - usando usuário mock")
+            logger.info("⚠️ Supabase não disponível - usando usuários mock locais")
     except Exception as e:
-        logger.error(f"Erro ao verificar usuário padrão: {e}")
+        logger.error(f"❌ Erro ao verificar/criar usuários padrão: {e}")
 
 # Classe de usuário mock para Flask-Login
 class MockUser:
@@ -158,17 +206,40 @@ class MockUser:
         return str(self.id)
 
 def authenticate_user(username, password):
-    """Autentica usuário"""
+    """Autentica usuário com Supabase integrado"""
     try:
         logger.info(f"🔐 Tentando autenticar usuário: {username}")
         
-        # Autenticação para usuários especiais
+        # Primeiro, tentar autenticar via Supabase
+        if SUPABASE_AVAILABLE:
+            try:
+                # Buscar usuário no Supabase
+                usuarios = Usuario.get_all()
+                for usuario in usuarios:
+                    if (usuario.get('username') == username and 
+                        usuario.get('password') == password and 
+                        usuario.get('ativo', True)):
+                        
+                        logger.info(f"✅ Usuário {username} autenticado via Supabase")
+                        
+                        # Criar objeto MockUser para Flask-Login
+                        if username == 'erick':
+                            return MockUser(usuario['id'], username, 'Erick Finger - Admin Máximo')
+                        else:
+                            return MockUser(usuario['id'], username, usuario.get('nome', username))
+                
+                logger.warning(f"❌ Usuário {username} não encontrado ou inativo no Supabase")
+                
+            except Exception as e:
+                logger.warning(f"⚠️ Erro ao buscar usuário no Supabase: {e}")
+        
+        # Fallback para autenticação local (usuários especiais)
         if username == 'admin' and password == 'admin123':
-            logger.info(f"✅ Usuário {username} autenticado com sucesso")
+            logger.info(f"✅ Usuário {username} autenticado localmente")
             return MockUser('admin', 'admin', 'Administrador')
         
         if username == 'erick' and password == '21324354':
-            logger.info(f"✅ Usuário {username} autenticado com sucesso (Admin Máximo)")
+            logger.info(f"✅ Usuário {username} autenticado localmente (fallback)")
             return MockUser('erick', 'erick', 'Erick Finger - Admin Máximo')
         
         logger.warning(f"❌ Falha na autenticação para usuário: {username}")
@@ -630,9 +701,9 @@ def login():
                 </form>
                 
                 <div class="credentials">
-                    <p><strong>🔑 Credenciais padrão:</strong></p>
-                    <p><strong>Usuário:</strong> admin</p>
-                    <p><strong>Senha:</strong> admin123</p>
+                    <p><strong>🔑 Credenciais disponíveis:</strong></p>
+                    <p><strong>Usuário:</strong> admin | <strong>Senha:</strong> admin123</p>
+                    <p><strong>Usuário:</strong> erick | <strong>Senha:</strong> 21324354</p>
                 </div>
                 
                 <div class="info">
