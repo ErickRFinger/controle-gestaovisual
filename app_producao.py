@@ -785,6 +785,14 @@ def produtos():
     try:
         produtos_list = Produto.get_all()
         categorias_list = Categoria.get_all()
+        estoque_list = Estoque.get_all()
+        
+        # Criar um dicionário de estoque por produto_id para busca rápida
+        estoque_por_produto = {}
+        for item_estoque in estoque_list:
+            produto_id = item_estoque.get('produto_id')
+            if produto_id:
+                estoque_por_produto[produto_id] = item_estoque
         
         # Processar produtos para incluir informações de categoria e estoque
         produtos_processados = []
@@ -800,12 +808,18 @@ def produtos():
             # Adicionar objeto de categoria ao produto
             produto['categoria_obj'] = categoria_obj
             
-            # Garantir que campos de estoque existam
-            if 'quantidade' not in produto:
+            # Buscar informações de estoque para este produto
+            estoque_info = estoque_por_produto.get(produto.get('id'))
+            
+            if estoque_info:
+                # Produto tem registro de estoque
+                produto['quantidade'] = estoque_info.get('quantidade', 0)
+                produto['quantidade_minima'] = estoque_info.get('quantidade_minima', 0)
+                produto['localizacao'] = estoque_info.get('localizacao', '')
+            else:
+                # Produto não tem registro de estoque - usar valores padrão
                 produto['quantidade'] = 0
-            if 'quantidade_minima' not in produto:
                 produto['quantidade_minima'] = 0
-            if 'localizacao' not in produto:
                 produto['localizacao'] = ''
             
             produtos_processados.append(produto)
@@ -834,16 +848,27 @@ def novo_produto():
                 'nome': request.form['nome'],
                 'descricao': request.form['descricao'],
                 'preco': float(request.form['preco']),
-                'quantidade': int(request.form.get('quantidade', 0)),
-                'quantidade_minima': int(request.form.get('quantidade_minima', 0)),
-                'localizacao': request.form.get('localizacao', ''),
                 'categoria_id': request.form['categoria_id'],
                 'codigo_barras': request.form['codigo_barras'],
                 'imagem': imagem_filename
             }
             
-            if Produto.create(**produto_data):
-                flash('Produto criado com sucesso!', 'success')
+            # Criar produto primeiro
+            produto_criado = Produto.create(**produto_data)
+            if produto_criado:
+                # Criar registro de estoque automaticamente
+                estoque_data = {
+                    'produto_id': produto_criado['id'],
+                    'quantidade': int(request.form.get('quantidade', 0)),
+                    'quantidade_minima': int(request.form.get('quantidade_minima', 0)),
+                    'localizacao': request.form.get('localizacao', '')
+                }
+                
+                if Estoque.create(**estoque_data):
+                    flash('Produto e estoque criados com sucesso!', 'success')
+                else:
+                    flash('Produto criado, mas erro ao criar estoque!', 'warning')
+                
                 return redirect(url_for('produtos'))
             else:
                 flash('Erro ao criar produto!', 'error')
@@ -936,10 +961,54 @@ def editar_produto(id):
                 
                 logger.info(f"✅ Dados preparados para atualização: {produto_data}")
                 
-                # Tentar atualizar no Supabase
+                # Tentar atualizar produto no Supabase
                 try:
                     resultado = Produto.update(id, **produto_data)
-                    logger.info(f"📊 Resultado da atualização: {resultado}")
+                    logger.info(f"📊 Resultado da atualização do produto: {resultado}")
+                    
+                    # Atualizar também o estoque se os campos estiverem presentes
+                    if (request.form.get('quantidade') is not None or 
+                        request.form.get('quantidade_minima') is not None or 
+                        request.form.get('localizacao')):
+                        
+                        # Buscar registro de estoque existente
+                        estoque_existente = None
+                        try:
+                            estoque_list = Estoque.get_all()
+                            for item in estoque_list:
+                                if item.get('produto_id') == id:
+                                    estoque_existente = item
+                                    break
+                        except:
+                            pass
+                        
+                        if estoque_existente:
+                            # Atualizar registro de estoque existente
+                            estoque_data = {}
+                            if request.form.get('quantidade') is not None:
+                                estoque_data['quantidade'] = int(request.form['quantidade'])
+                            if request.form.get('quantidade_minima') is not None:
+                                estoque_data['quantidade_minima'] = int(request.form['quantidade_minima'])
+                            if request.form.get('localizacao'):
+                                estoque_data['localizacao'] = request.form['localizacao']
+                            
+                            if Estoque.update(estoque_existente['id'], **estoque_data):
+                                logger.info(f"✅ Estoque do produto {id} atualizado com sucesso")
+                            else:
+                                logger.warning(f"⚠️ Falha ao atualizar estoque do produto {id}")
+                        else:
+                            # Criar novo registro de estoque
+                            estoque_data = {
+                                'produto_id': id,
+                                'quantidade': int(request.form.get('quantidade', 0)),
+                                'quantidade_minima': int(request.form.get('quantidade_minima', 0)),
+                                'localizacao': request.form.get('localizacao', '')
+                            }
+                            
+                            if Estoque.create(**estoque_data):
+                                logger.info(f"✅ Estoque do produto {id} criado com sucesso")
+                            else:
+                                logger.warning(f"⚠️ Falha ao criar estoque do produto {id}")
                     
                     if resultado:
                         logger.info(f"✅ Produto {id} atualizado com sucesso no Supabase")
@@ -1001,12 +1070,21 @@ def estoque():
     try:
         logger.info("📊 Acessando rota de estoque")
         
-        # Buscar produtos com suas categorias
+        # Buscar produtos e estoque separadamente
         try:
             produtos_list = Produto.get_all()
+            estoque_list = Estoque.get_all()
             logger.info(f"✅ Produtos carregados: {len(produtos_list)} itens")
+            logger.info(f"✅ Estoque carregado: {len(estoque_list)} itens")
             
-            # Buscar categorias para cada produto
+            # Criar um dicionário de estoque por produto_id para busca rápida
+            estoque_por_produto = {}
+            for item_estoque in estoque_list:
+                produto_id = item_estoque.get('produto_id')
+                if produto_id:
+                    estoque_por_produto[produto_id] = item_estoque
+            
+            # Buscar categorias para cada produto e combinar com estoque
             estoque_items = []
             for produto in produtos_list:
                 categoria = None
@@ -1016,14 +1094,27 @@ def estoque():
                     except:
                         categoria = {'nome': 'Sem categoria', 'cor': '#6c757d', 'icone': 'bi-tag'}
                 
-                # Criar objeto de estoque baseado no produto
-                estoque_item = {
-                    'id': produto.get('id'),
-                    'quantidade': produto.get('quantidade', 0),
-                    'quantidade_minima': produto.get('quantidade_minima', 0),
-                    'localizacao': produto.get('localizacao', ''),
-                    'data_atualizacao': produto.get('updated_at', datetime.now())
-                }
+                # Buscar informações de estoque para este produto
+                estoque_info = estoque_por_produto.get(produto.get('id'))
+                
+                if estoque_info:
+                    # Produto tem registro de estoque
+                    estoque_item = {
+                        'id': estoque_info.get('id'),
+                        'quantidade': estoque_info.get('quantidade', 0),
+                        'quantidade_minima': estoque_info.get('quantidade_minima', 0),
+                        'localizacao': estoque_info.get('localizacao', ''),
+                        'data_atualizacao': estoque_info.get('updated_at', estoque_info.get('created_at', datetime.now()))
+                    }
+                else:
+                    # Produto não tem registro de estoque - criar um padrão
+                    estoque_item = {
+                        'id': None,
+                        'quantidade': 0,
+                        'quantidade_minima': 0,
+                        'localizacao': '',
+                        'data_atualizacao': produto.get('updated_at', produto.get('created_at', datetime.now()))
+                    }
                 
                 # Converter string de data para objeto datetime se necessário
                 if isinstance(estoque_item['data_atualizacao'], str):
@@ -1037,7 +1128,7 @@ def estoque():
             logger.info(f"📊 Estoque processado: {len(estoque_items)} itens")
             
         except Exception as e:
-            logger.warning(f"⚠️ Erro ao carregar produtos: {e}")
+            logger.warning(f"⚠️ Erro ao carregar produtos/estoque: {e}")
             estoque_items = []
         
         return render_template('estoque.html', estoque_items=estoque_items)
@@ -1073,20 +1164,46 @@ def ajustar_estoque(produto_id):
             flash('Produto não encontrado!', 'error')
             return redirect(url_for('estoque'))
         
-        # Preparar dados para atualização
-        produto_data = {
-            'quantidade': quantidade,
-            'quantidade_minima': quantidade_minima,
-            'localizacao': localizacao
-        }
+        # Buscar registro de estoque existente
+        estoque_existente = None
+        try:
+            estoque_list = Estoque.get_all()
+            for item in estoque_list:
+                if item.get('produto_id') == produto_id:
+                    estoque_existente = item
+                    break
+        except:
+            pass
         
-        # Atualizar produto
-        if Produto.update(produto_id, **produto_data):
-            flash(f'Estoque atualizado com sucesso! Nova quantidade: {quantidade}', 'success')
-            logger.info(f"✅ Estoque do produto {produto_id} atualizado para {quantidade}")
+        if estoque_existente:
+            # Atualizar registro de estoque existente
+            estoque_data = {
+                'quantidade': quantidade,
+                'quantidade_minima': quantidade_minima,
+                'localizacao': localizacao
+            }
+            
+            if Estoque.update(estoque_existente['id'], **estoque_data):
+                flash(f'Estoque atualizado com sucesso! Nova quantidade: {quantidade}', 'success')
+                logger.info(f"✅ Estoque do produto {produto_id} atualizado para {quantidade}")
+            else:
+                flash('Erro ao atualizar estoque!', 'error')
+                logger.error(f"❌ Falha ao atualizar estoque do produto {produto_id}")
         else:
-            flash('Erro ao atualizar estoque!', 'error')
-            logger.error(f"❌ Falha ao atualizar estoque do produto {produto_id}")
+            # Criar novo registro de estoque
+            estoque_data = {
+                'produto_id': produto_id,
+                'quantidade': quantidade,
+                'quantidade_minima': quantidade_minima,
+                'localizacao': localizacao
+            }
+            
+            if Estoque.create(**estoque_data):
+                flash(f'Estoque criado com sucesso! Quantidade: {quantidade}', 'success')
+                logger.info(f"✅ Estoque do produto {produto_id} criado com quantidade {quantidade}")
+            else:
+                flash('Erro ao criar estoque!', 'error')
+                logger.error(f"❌ Falha ao criar estoque do produto {produto_id}")
         
         return redirect(url_for('estoque'))
         
@@ -1110,7 +1227,22 @@ def venda_rapida(produto_id):
             flash('Produto não encontrado!', 'error')
             return redirect(url_for('estoque'))
         
-        estoque_atual = produto.get('quantidade', 0)
+        # Buscar registro de estoque
+        estoque_info = None
+        try:
+            estoque_list = Estoque.get_all()
+            for item in estoque_list:
+                if item.get('produto_id') == produto_id:
+                    estoque_info = item
+                    break
+        except:
+            pass
+        
+        if not estoque_info:
+            flash('Produto não possui registro de estoque!', 'error')
+            return redirect(url_for('estoque'))
+        
+        estoque_atual = estoque_info.get('quantidade', 0)
         
         # Validar estoque
         if quantidade > estoque_atual:
@@ -1126,11 +1258,11 @@ def venda_rapida(produto_id):
         preco_total = float(produto.get('preco', 0)) * quantidade
         
         # Atualizar estoque
-        produto_data = {
+        estoque_data = {
             'quantidade': novo_estoque
         }
         
-        if Produto.update(produto_id, **produto_data):
+        if Estoque.update(estoque_info['id'], **estoque_data):
             # Criar venda
             venda_data = {
                 'cliente_id': None,  # Venda sem cliente específico
@@ -1183,20 +1315,46 @@ def atualizar_estoque_produto(id):
             flash('Produto não encontrado!', 'error')
             return redirect(url_for('produtos'))
         
-        # Preparar dados para atualização
-        produto_data = {
-            'quantidade': quantidade,
-            'quantidade_minima': quantidade_minima,
-            'localizacao': localizacao
-        }
+        # Buscar registro de estoque existente
+        estoque_existente = None
+        try:
+            estoque_list = Estoque.get_all()
+            for item in estoque_list:
+                if item.get('produto_id') == id:
+                    estoque_existente = item
+                    break
+        except:
+            pass
         
-        # Atualizar produto
-        if Produto.update(id, **produto_data):
-            flash(f'Estoque atualizado com sucesso! Nova quantidade: {quantidade}', 'success')
-            logger.info(f"✅ Estoque do produto {id} atualizado para {quantidade}")
+        if estoque_existente:
+            # Atualizar registro de estoque existente
+            estoque_data = {
+                'quantidade': quantidade,
+                'quantidade_minima': quantidade_minima,
+                'localizacao': localizacao
+            }
+            
+            if Estoque.update(estoque_existente['id'], **estoque_data):
+                flash(f'Estoque atualizado com sucesso! Nova quantidade: {quantidade}', 'success')
+                logger.info(f"✅ Estoque do produto {id} atualizado para {quantidade}")
+            else:
+                flash('Erro ao atualizar estoque!', 'error')
+                logger.error(f"❌ Falha ao atualizar estoque do produto {id}")
         else:
-            flash('Erro ao atualizar estoque!', 'error')
-            logger.error(f"❌ Falha ao atualizar estoque do produto {id}")
+            # Criar novo registro de estoque
+            estoque_data = {
+                'produto_id': id,
+                'quantidade': quantidade,
+                'quantidade_minima': quantidade_minima,
+                'localizacao': localizacao
+            }
+            
+            if Estoque.create(**estoque_data):
+                flash(f'Estoque criado com sucesso! Quantidade: {quantidade}', 'success')
+                logger.info(f"✅ Estoque do produto {id} criado com quantidade {quantidade}")
+            else:
+                flash('Erro ao criar estoque!', 'error')
+                logger.error(f"❌ Falha ao criar estoque do produto {id}")
         
         return redirect(url_for('produtos'))
         
