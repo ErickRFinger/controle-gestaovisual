@@ -871,15 +871,34 @@ def editar_produto(id):
                     flash('Categoria é obrigatória!', 'error')
                     raise ValueError("Categoria não informada")
                 
-                produto_data = {
-                    'nome': request.form['nome'],
-                    'descricao': request.form.get('descricao', ''),
-                    'preco': float(request.form.get('preco', 0)),
-                    'quantidade': int(request.form.get('quantidade', 0)),
-                    'categoria_id': request.form['categoria_id'],
-                    'codigo_barras': request.form.get('codigo_barras', ''),
-                    'imagem': imagem_filename
-                }
+                # Preparar dados do produto
+                produto_data = {}
+                
+                # Campos obrigatórios
+                if request.form.get('nome'):
+                    produto_data['nome'] = request.form['nome']
+                
+                # Campos opcionais
+                if request.form.get('descricao'):
+                    produto_data['descricao'] = request.form['descricao']
+                
+                if request.form.get('preco'):
+                    produto_data['preco'] = float(request.form['preco'])
+                
+                if request.form.get('quantidade') is not None:
+                    produto_data['quantidade'] = int(request.form['quantidade'])
+                
+                if request.form.get('categoria_id'):
+                    produto_data['categoria_id'] = request.form['categoria_id']
+                
+                if request.form.get('codigo_barras'):
+                    produto_data['codigo_barras'] = request.form['codigo_barras']
+                
+                if imagem_filename:
+                    produto_data['imagem'] = imagem_filename
+                
+                logger.info(f"🔍 Campos do formulário disponíveis: {list(request.form.keys())}")
+                logger.info(f"📝 Dados filtrados para atualização: {produto_data}")
                 
                 logger.info(f"✅ Dados preparados para atualização: {produto_data}")
                 
