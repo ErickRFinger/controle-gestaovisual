@@ -5,7 +5,7 @@ Sistema Empresarial - Versão de Produção
 Hospedado no Render
 """
 
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
@@ -910,12 +910,134 @@ def excluir_produto(id):
 def estoque():
     """Lista de estoque"""
     try:
-        estoque_list = Estoque.get_all()
-        return render_template('estoque.html', estoque=estoque_list)
+        logger.info("📊 Acessando rota de estoque")
+        
+        # Buscar dados do estoque
+        try:
+            estoque_list = Estoque.get_all()
+            logger.info(f"✅ Estoque carregado: {len(estoque_list)} itens")
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao carregar estoque do Supabase: {e}")
+            estoque_list = []
+        
+        # Buscar produtos para mostrar informações completas
+        try:
+            produtos_list = Produto.get_all()
+            logger.info(f"✅ Produtos carregados: {len(produtos_list)} itens")
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao carregar produtos: {e}")
+            produtos_list = []
+        
+        # Criar HTML inline para evitar problemas de template
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Estoque - Sistema Empresarial</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f8f9fa; padding: 20px; }}
+                .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); overflow: hidden; }}
+                .header {{ background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 30px; text-align: center; }}
+                .header h1 {{ font-size: 2.5em; margin-bottom: 10px; }}
+                .content {{ padding: 30px; }}
+                .stats {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin: 30px 0; }}
+                .stat-card {{ background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 20px; border-radius: 12px; text-align: center; }}
+                .table-container {{ overflow-x: auto; margin: 30px 0; }}
+                table {{ width: 100%; border-collapse: collapse; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }}
+                th, td {{ padding: 15px; text-align: left; border-bottom: 1px solid #dee2e6; }}
+                th {{ background: #667eea; color: white; font-weight: 600; }}
+                tr:hover {{ background: #f8f9fa; }}
+                .btn {{ background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 8px; margin: 5px; display: inline-block; }}
+                .btn:hover {{ background: #5a6fd8; }}
+                .actions {{ text-align: center; margin-top: 30px; }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>📊 Controle de Estoque</h1>
+                    <p>Gerencie o estoque dos seus produtos</p>
+                </div>
+                
+                <div class="content">
+                    <div class="stats">
+                        <div class="stat-card">
+                            <h3>📦 Total de Produtos</h3>
+                            <div style="font-size: 2em; font-weight: bold;">{len(produtos_list)}</div>
+                        </div>
+                        <div class="stat-card">
+                            <h3>📊 Itens em Estoque</h3>
+                            <div style="font-size: 2em; font-weight: bold;">{len(estoque_list)}</div>
+                        </div>
+                    </div>
+                    
+                    <div class="table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Produto</th>
+                                    <th>Quantidade</th>
+                                    <th>Preço</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {''.join([f'''
+                                <tr>
+                                    <td>{item.get('nome', 'N/A')}</td>
+                                    <td>{item.get('quantidade', 0)}</td>
+                                    <td>R$ {item.get('preco', 0):.2f}</td>
+                                    <td>{'✅ Em estoque' if item.get('quantidade', 0) > 0 else '❌ Sem estoque'}</td>
+                                </tr>
+                                ''' for item in estoque_list[:10]]) if estoque_list else '<tr><td colspan="4" style="text-align: center; padding: 30px;">Nenhum item em estoque encontrado</td></tr>'}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="actions">
+                        <a href="/" class="btn">🏠 Dashboard</a>
+                        <a href="/produtos" class="btn">📦 Produtos</a>
+                        <a href="/vendas" class="btn">💰 Vendas</a>
+                        <a href="/logout" class="btn">🚪 Sair</a>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
     except Exception as e:
-        logger.error(f"Erro ao carregar estoque: {e}")
-        flash(f'Erro ao carregar estoque: {e}', 'error')
-        return render_template('estoque.html', estoque=[])
+        logger.error(f"❌ Erro crítico na rota de estoque: {e}")
+        # Página de erro de emergência
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Erro - Estoque</title>
+            <meta charset="utf-8">
+            <style>
+                body {{ font-family: Arial, sans-serif; margin: 40px; background: #f8f9fa; }}
+                .error-container {{ background: white; padding: 40px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center; max-width: 600px; margin: 0 auto; }}
+                .error-icon {{ font-size: 4em; margin-bottom: 20px; }}
+                .btn {{ background: #667eea; color: white; padding: 12px 25px; text-decoration: none; border-radius: 8px; margin: 10px; display: inline-block; }}
+            </style>
+        </head>
+        <body>
+            <div class="error-container">
+                <div class="error-icon">⚠️</div>
+                <h1>Erro no Estoque</h1>
+                <p>Ocorreu um erro ao carregar o estoque.</p>
+                <p><strong>Erro:</strong> {e}</p>
+                <hr style="margin: 30px 0;">
+                <a href="/" class="btn">🏠 Dashboard</a>
+                <a href="/teste" class="btn">🧪 Teste</a>
+            </div>
+        </body>
+        </html>
+        """
 
 # Rotas de Vendas
 @app.route('/vendas')
@@ -1135,6 +1257,17 @@ def api_status():
             'error': str(e),
             'timestamp': str(datetime.now())
         }), 500
+
+@app.route('/uploads/<filename>')
+def uploaded_file(filename):
+    """Rota para servir arquivos de upload"""
+    try:
+        logger.info(f"📁 Servindo arquivo: {filename}")
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    except Exception as e:
+        logger.error(f"❌ Erro ao servir arquivo {filename}: {e}")
+        # Retornar imagem padrão ou erro
+        return "Arquivo não encontrado", 404
 
 @app.route('/teste-sessao')
 def teste_sessao():
