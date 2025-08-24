@@ -17,7 +17,7 @@ import uuid
 # Configurações básicas
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'sua_chave_secreta_muito_segura_aqui_123456789')
-app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
+app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 # Configurar logging mais detalhado
@@ -181,15 +181,19 @@ def save_image(file):
             filename = secure_filename(file.filename)
             # Gerar nome único
             unique_filename = f"{uuid.uuid4()}_{filename}"
-            filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
             
-            # Criar diretório se não existir
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            # Criar diretório de upload se não existir
+            upload_folder = app.config['UPLOAD_FOLDER']
+            os.makedirs(upload_folder, exist_ok=True)
             
+            filepath = os.path.join(upload_folder, unique_filename)
+            
+            logger.info(f"💾 Salvando imagem: {filepath}")
             file.save(filepath)
+            logger.info(f"✅ Imagem salva com sucesso: {unique_filename}")
             return unique_filename
     except Exception as e:
-        logger.error(f"Erro ao salvar imagem: {e}")
+        logger.error(f"❌ Erro ao salvar imagem: {e}")
         return None
 
 # Rotas principais
@@ -843,6 +847,11 @@ def editar_produto(id):
             logger.debug(f"Form data: {dict(request.form)}")
             
             try:
+                # Log dos dados recebidos do formulário
+                logger.info(f"📝 Dados do formulário recebidos:")
+                for key, value in request.form.items():
+                    logger.info(f"   {key}: {value}")
+                
                 # Processar upload de imagem
                 imagem_filename = produto.get('imagem')  # Manter imagem atual
                 if 'imagem' in request.files:
@@ -853,25 +862,37 @@ def editar_produto(id):
                         if nova_imagem:
                             imagem_filename = nova_imagem
                 
+                # Validar campos obrigatórios
+                if not request.form.get('nome'):
+                    flash('Nome do produto é obrigatório!', 'error')
+                    raise ValueError("Nome não informado")
+                
+                if not request.form.get('categoria_id'):
+                    flash('Categoria é obrigatória!', 'error')
+                    raise ValueError("Categoria não informada")
+                
                 produto_data = {
                     'nome': request.form['nome'],
-                    'descricao': request.form['descricao'],
-                    'preco': float(request.form['preco']),
-                    'quantidade': int(request.form.get('quantidade', 0)),  # ADICIONANDO QUANTIDADE!
+                    'descricao': request.form.get('descricao', ''),
+                    'preco': float(request.form.get('preco', 0)),
+                    'quantidade': int(request.form.get('quantidade', 0)),
                     'categoria_id': request.form['categoria_id'],
-                    'codigo_barras': request.form['codigo_barras'],
+                    'codigo_barras': request.form.get('codigo_barras', ''),
                     'imagem': imagem_filename
                 }
                 
-                logger.debug(f"Dados do produto para edição: {produto_data}")
+                logger.info(f"✅ Dados preparados para atualização: {produto_data}")
                 
-                if Produto.update(id, **produto_data):
-                    logger.info(f"Produto {id} atualizado com sucesso")
+                resultado = Produto.update(id, **produto_data)
+                logger.info(f"📊 Resultado da atualização: {resultado}")
+                
+                if resultado:
+                    logger.info(f"✅ Produto {id} atualizado com sucesso")
                     flash('Produto atualizado com sucesso!', 'success')
                     return redirect(url_for('produtos'))
                 else:
-                    logger.error(f"Falha ao atualizar produto {id}")
-                    flash('Erro ao atualizar produto!', 'error')
+                    logger.error(f"❌ Falha ao atualizar produto {id}")
+                    flash('Erro ao atualizar produto! Verifique os dados e tente novamente.', 'error')
             except Exception as e:
                 logger.error(f"Erro ao processar dados do produto: {e}")
                 flash(f'Erro ao processar dados: {e}', 'error')
@@ -1032,7 +1053,6 @@ def estoque():
                                         </span>
                                     </td>
                                     <td>
-                                        <a href="/produto/editar/{item.get('id')}" class="btn">✏️ Editar</a>
                                         <a href="/produto/editar/{item.get('id')}" class="btn" style="background: #28a745;">📊 Editar Estoque</a>
                                     </td>
                                 </tr>
