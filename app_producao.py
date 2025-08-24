@@ -210,15 +210,39 @@ def index():
         
         logger.info("✅ Usuário autenticado, carregando dashboard")
         
-        # Estatísticas básicas
+        # Estatísticas básicas com tratamento de erro robusto
+        total_clientes = 0
+        total_produtos = 0
+        total_categorias = 0
+        total_vendas = 0
+        
         try:
-            total_clientes = len(Cliente.get_all())
-            total_produtos = len(Produto.get_all())
-            total_categorias = len(Categoria.get_all())
-            total_vendas = len(Venda.get_all())
-        except Exception as stats_error:
-            logger.warning(f"⚠️ Erro ao carregar estatísticas: {stats_error}")
-            total_clientes = total_produtos = total_categorias = total_vendas = 0
+            if hasattr(Cliente, 'get_all') and callable(Cliente.get_all):
+                total_clientes = len(Cliente.get_all())
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao carregar clientes: {e}")
+            total_clientes = 0
+            
+        try:
+            if hasattr(Produto, 'get_all') and callable(Produto.get_all):
+                total_produtos = len(Produto.get_all())
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao carregar produtos: {e}")
+            total_produtos = 0
+            
+        try:
+            if hasattr(Categoria, 'get_all') and callable(Categoria.get_all):
+                total_categorias = len(Categoria.get_all())
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao carregar categorias: {e}")
+            total_categorias = 0
+            
+        try:
+            if hasattr(Venda, 'get_all') and callable(Venda.get_all):
+                total_vendas = len(Venda.get_all())
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao carregar vendas: {e}")
+            total_vendas = 0
         
         # Retornar HTML simples e funcional
         return f"""
