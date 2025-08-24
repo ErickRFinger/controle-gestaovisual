@@ -109,7 +109,7 @@
                             </label>
                             <input type="number" class="form-control" id="quantidade" name="quantidade" 
                                    min="0" 
-                                   value="{{ estoque.quantidade if estoque else '0' }}" required>
+                                   value="{{ produto.quantidade if produto else '0' }}" required>
                         </div>
                         
                         <div class="col-md-4 mb-3">
@@ -118,7 +118,7 @@
                             </label>
                             <input type="number" class="form-control" id="quantidade_minima" name="quantidade_minima" 
                                    min="0" 
-                                   value="{{ estoque.quantidade_minima if estoque else '0' }}" required>
+                                   value="{{ produto.quantidade_minima if produto else '0' }}" required>
                         </div>
                         
                         <div class="col-md-4 mb-3">
@@ -127,7 +127,7 @@
                             </label>
                             <input type="text" class="form-control" id="localizacao" name="localizacao" 
                                    placeholder="Ex: Prateleira A1" 
-                                   value="{{ estoque.localizacao if estoque else '' }}">
+                                   value="{{ produto.localizacao if produto else '' }}">
                         </div>
                     </div>
 
