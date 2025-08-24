@@ -785,7 +785,33 @@ def produtos():
     try:
         produtos_list = Produto.get_all()
         categorias_list = Categoria.get_all()
-        return render_template('produtos.html', produtos=produtos_list, categorias=categorias_list)
+        
+        # Processar produtos para incluir informações de categoria e estoque
+        produtos_processados = []
+        for produto in produtos_list:
+            # Buscar categoria do produto
+            categoria_obj = None
+            if produto.get('categoria_id'):
+                try:
+                    categoria_obj = Categoria.get_by_id(produto['categoria_id'])
+                except:
+                    categoria_obj = {'nome': 'Sem categoria', 'cor': '#6c757d', 'icone': 'bi-tag'}
+            
+            # Adicionar objeto de categoria ao produto
+            produto['categoria_obj'] = categoria_obj
+            
+            # Garantir que campos de estoque existam
+            if 'quantidade' not in produto:
+                produto['quantidade'] = 0
+            if 'quantidade_minima' not in produto:
+                produto['quantidade_minima'] = 0
+            if 'localizacao' not in produto:
+                produto['localizacao'] = ''
+            
+            produtos_processados.append(produto)
+        
+        logger.info(f"✅ Produtos processados: {len(produtos_processados)} itens")
+        return render_template('produtos.html', produtos=produtos_processados, categorias=categorias_list)
     except Exception as e:
         logger.error(f"Erro ao carregar produtos: {e}")
         flash(f'Erro ao carregar produtos: {e}', 'error')
@@ -999,6 +1025,13 @@ def estoque():
                     'data_atualizacao': produto.get('updated_at', datetime.now())
                 }
                 
+                # Converter string de data para objeto datetime se necessário
+                if isinstance(estoque_item['data_atualizacao'], str):
+                    try:
+                        estoque_item['data_atualizacao'] = datetime.fromisoformat(estoque_item['data_atualizacao'].replace('Z', '+00:00'))
+                    except:
+                        estoque_item['data_atualizacao'] = datetime.now()
+                
                 estoque_items.append((produto, estoque_item, categoria or {'nome': 'Sem categoria', 'cor': '#6c757d', 'icone': 'bi-tag'}))
             
             logger.info(f"📊 Estoque processado: {len(estoque_items)} itens")
@@ -1123,6 +1156,54 @@ def venda_rapida(produto_id):
         logger.error(f"❌ Erro na venda rápida: {e}")
         flash(f'Erro na venda rápida: {e}', 'error')
         return redirect(url_for('estoque'))
+
+@app.route('/produto/atualizar-estoque/<id>', methods=['POST'])
+@login_required
+def atualizar_estoque_produto(id):
+    """Atualiza apenas o estoque de um produto (rota específica para produtos)"""
+    try:
+        logger.info(f"📊 Atualizando estoque do produto {id} via página de produtos")
+        
+        quantidade = int(request.form.get('quantidade', 0))
+        quantidade_minima = int(request.form.get('quantidade_minima', 0))
+        localizacao = request.form.get('localizacao', '')
+        
+        # Validar dados
+        if quantidade < 0:
+            flash('Quantidade não pode ser negativa!', 'error')
+            return redirect(url_for('produtos'))
+        
+        if quantidade_minima < 0:
+            flash('Quantidade mínima não pode ser negativa!', 'error')
+            return redirect(url_for('produtos'))
+        
+        # Buscar produto atual
+        produto = Produto.get_by_id(id)
+        if not produto:
+            flash('Produto não encontrado!', 'error')
+            return redirect(url_for('produtos'))
+        
+        # Preparar dados para atualização
+        produto_data = {
+            'quantidade': quantidade,
+            'quantidade_minima': quantidade_minima,
+            'localizacao': localizacao
+        }
+        
+        # Atualizar produto
+        if Produto.update(id, **produto_data):
+            flash(f'Estoque atualizado com sucesso! Nova quantidade: {quantidade}', 'success')
+            logger.info(f"✅ Estoque do produto {id} atualizado para {quantidade}")
+        else:
+            flash('Erro ao atualizar estoque!', 'error')
+            logger.error(f"❌ Falha ao atualizar estoque do produto {id}")
+        
+        return redirect(url_for('produtos'))
+        
+    except Exception as e:
+        logger.error(f"❌ Erro ao atualizar estoque do produto: {e}")
+        flash(f'Erro ao atualizar estoque: {e}', 'error')
+        return redirect(url_for('produtos'))
 
 # Rotas de Vendas
 @app.route('/vendas')
