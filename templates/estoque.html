@@ -67,7 +67,17 @@
                                         <span class="text-muted">-</span>
                                     {% endif %}
                                 </td>
-                                <td>{{ estoque.data_atualizacao.strftime('%d/%m/%Y %H:%M') if hasattr(estoque.data_atualizacao, 'strftime') else (estoque.data_atualizacao[:10] if estoque.data_atualizacao else 'N/A') }}</td>
+                                <td>
+                                    {% if estoque.data_atualizacao %}
+                                        {% if estoque.data_atualizacao is string %}
+                                            {{ estoque.data_atualizacao[:10] }}
+                                        {% else %}
+                                            {{ estoque.data_atualizacao.strftime('%d/%m/%Y') }}
+                                        {% endif %}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
                                 <td>
                                     <div class="btn-group" role="group">
                                         <button class="btn btn-outline-primary btn-sm" 
