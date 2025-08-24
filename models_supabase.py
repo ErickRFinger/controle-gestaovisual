@@ -72,17 +72,38 @@ class BaseModel:
     def update(cls, id, **data):
         """Atualiza um registro"""
         try:
+            logger.info(f"🔄 Tentando atualizar {cls.__name__} com ID: {id}")
+            logger.info(f"📝 Dados para atualização: {data}")
+            
             table = cls.get_table()
             if table:
+                logger.info(f"✅ Tabela {cls.__tablename__} obtida com sucesso")
+                
                 # Adiciona timestamp de atualização
                 data['updated_at'] = datetime.utcnow().isoformat()
+                logger.info(f"⏰ Timestamp adicionado: {data['updated_at']}")
+                
+                # Log da query que será executada
+                logger.info(f"🔍 Query: UPDATE {cls.__tablename__} SET {data} WHERE id = {id}")
                 
                 response = table.update(data).eq('id', id).execute()
-                logger.info(f"✅ {cls.__name__} atualizado com sucesso")
-                return response.data[0] if response.data else None
-            return None
+                logger.info(f"📊 Resposta do Supabase: {response}")
+                
+                if response.data:
+                    logger.info(f"✅ {cls.__name__} atualizado com sucesso! Dados retornados: {response.data}")
+                    return response.data[0]
+                else:
+                    logger.warning(f"⚠️ Nenhum dado retornado na atualização")
+                    return None
+            else:
+                logger.error(f"❌ Tabela {cls.__tablename__} não pôde ser obtida")
+                return None
         except Exception as e:
             logger.error(f"❌ Erro ao atualizar {cls.__name__}: {e}")
+            logger.error(f"🔍 Tipo do erro: {type(e)}")
+            logger.error(f"📋 Detalhes do erro: {str(e)}")
+            import traceback
+            logger.error(f"📚 Stack trace: {traceback.format_exc()}")
             return None
     
     @classmethod
