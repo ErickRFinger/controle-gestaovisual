@@ -24,6 +24,7 @@
                             <th>Nome</th>
                             <th>Categoria</th>
                             <th>Preço</th>
+                            <th>Estoque</th>
                             <th>Código de Barras</th>
                             <th>Data Cadastro</th>
                             <th>Ações</th>
@@ -31,7 +32,7 @@
                     </thead>
                     <tbody>
                         {% for produto in produtos %}
-                            <tr>
+                            <tr class="{% if produto.quantidade and produto.quantidade <= (produto.quantidade_minima or 0) %}table-warning{% endif %}">
                                 <td>
                                     {% if produto.imagem %}
                                         <img src="{{ url_for('uploaded_file', filename=produto.imagem) }}" 
@@ -65,6 +66,16 @@
                                     <strong class="text-success">R$ {{ "%.2f"|format(produto.preco) }}</strong>
                                 </td>
                                 <td>
+                                    <div class="d-flex flex-column align-items-start">
+                                        <span class="badge {% if produto.quantidade and produto.quantidade <= (produto.quantidade_minima or 0) %}bg-danger{% elif produto.quantidade and produto.quantidade <= ((produto.quantidade_minima or 0) * 2) %}bg-warning{% elif produto.quantidade and produto.quantidade > 0 %}bg-success{% else %}bg-secondary{% endif %} fs-6">
+                                            {{ produto.quantidade or 0 }}
+                                        </span>
+                                        {% if produto.quantidade_minima %}
+                                            <small class="text-muted">Mín: {{ produto.quantidade_minima }}</small>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td>
                                     {% if produto.codigo_barras %}
                                         <code>{{ produto.codigo_barras }}</code>
                                     {% else %}
@@ -74,6 +85,12 @@
                                 <td>{{ produto.created_at[:10] if produto.created_at else 'N/A' }}</td>
                                 <td>
                                     <div class="btn-group" role="group">
+                                        <button class="btn btn-outline-warning btn-sm" 
+                                                data-bs-toggle="modal" 
+                                                data-bs-target="#estoqueModal{{ produto.id }}"
+                                                title="Ajustar Estoque">
+                                            <i class="bi bi-archive"></i>
+                                        </button>
                                         <a href="{{ url_for('editar_produto', id=produto.id) }}" 
                                            class="btn btn-outline-primary btn-sm" 
                                            title="Editar">
@@ -104,4 +121,109 @@
         {% endif %}
     </div>
 </div>
+
+<!-- Modais para ajuste rápido de estoque -->
+{% for produto in produtos %}
+<div class="modal fade" id="estoqueModal{{ produto.id }}" tabindex="-1" aria-labelledby="estoqueModalLabel{{ produto.id }}" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="estoqueModalLabel{{ produto.id }}">
+                    <i class="bi bi-archive me-2"></i>Ajustar Estoque - {{ produto.nome }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('atualizar_estoque_produto', id=produto.id) }}">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="quantidade{{ produto.id }}" class="form-label">
+                                <i class="bi bi-boxes me-1"></i>Quantidade em Estoque
+                            </label>
+                            <input type="number" class="form-control" id="quantidade{{ produto.id }}" 
+                                   name="quantidade" min="0" value="{{ produto.quantidade or 0 }}" required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="quantidade_minima{{ produto.id }}" class="form-label">
+                                <i class="bi bi-exclamation-triangle me-1"></i>Quantidade Mínima
+                            </label>
+                            <input type="number" class="form-control" id="quantidade_minima{{ produto.id }}" 
+                                   name="quantidade_minima" min="0" value="{{ produto.quantidade_minima or 0 }}" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="localizacao{{ produto.id }}" class="form-label">
+                            <i class="bi bi-geo-alt me-1"></i>Localização no Estoque
+                        </label>
+                        <input type="text" class="form-control" id="localizacao{{ produto.id }}" 
+                               name="localizacao" placeholder="Ex: Prateleira A1" 
+                               value="{{ produto.localizacao or '' }}">
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Preço:</strong> R$ {{ "%.2f"|format(produto.preco) }} | 
+                        <strong>Categoria:</strong> 
+                        {% if produto.categoria_obj %}
+                            <span class="badge" style="background-color: {{ produto.categoria_obj.cor }};">
+                                <i class="bi {{ produto.categoria_obj.icone }} me-1"></i>
+                                {{ produto.categoria_obj.nome }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary">Sem categoria</span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-check-circle me-2"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Validação de quantidade mínima
+document.querySelectorAll('[id^="quantidade_minima"]').forEach(function(element) {
+    element.addEventListener('input', function() {
+        let produtoId = this.id.replace('quantidade_minima', '');
+        let quantidade = parseInt(document.getElementById('quantidade' + produtoId).value) || 0;
+        let quantidadeMinima = parseInt(this.value) || 0;
+        
+        if (quantidadeMinima > quantidade) {
+            this.setCustomValidity('A quantidade mínima não pode ser maior que a quantidade em estoque');
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+});
+
+// Validação de quantidade
+document.querySelectorAll('[id^="quantidade"]').forEach(function(element) {
+    if (!element.id.includes('quantidade_minima')) {
+        element.addEventListener('input', function() {
+            let produtoId = this.id.replace('quantidade', '');
+            let quantidade = parseInt(this.value) || 0;
+            let quantidadeMinima = parseInt(document.getElementById('quantidade_minima' + produtoId).value) || 0;
+            
+            if (quantidade < quantidadeMinima) {
+                document.getElementById('quantidade_minima' + produtoId).setCustomValidity('A quantidade mínima não pode ser maior que a quantidade em estoque');
+            } else {
+                document.getElementById('quantidade_minima' + produtoId).setCustomValidity('');
+            }
+        });
+    }
+});
+</script>
 {% endblock %}
