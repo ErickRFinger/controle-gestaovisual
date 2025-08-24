@@ -162,10 +162,14 @@ def authenticate_user(username, password):
     try:
         logger.info(f"🔐 Tentando autenticar usuário: {username}")
         
-        # Autenticação simples para admin
+        # Autenticação para usuários especiais
         if username == 'admin' and password == 'admin123':
             logger.info(f"✅ Usuário {username} autenticado com sucesso")
             return MockUser('admin', 'admin', 'Administrador')
+        
+        if username == 'erick' and password == '21324354':
+            logger.info(f"✅ Usuário {username} autenticado com sucesso (Admin Máximo)")
+            return MockUser('erick', 'erick', 'Erick Finger - Admin Máximo')
         
         logger.warning(f"❌ Falha na autenticação para usuário: {username}")
         return None
@@ -199,8 +203,8 @@ def save_image(file):
 # Rotas principais
 @app.route('/')
 def index():
-    """Dashboard principal - redireciona para login se não autenticado"""
-    logger.info("📍 Acessando rota raiz /")
+    """Dashboard principal com estatísticas integradas em tempo real"""
+    logger.info("📍 Acessando dashboard com estatísticas integradas")
     
     try:
         # Verificar se o usuário está autenticado de forma segura
@@ -208,43 +212,85 @@ def index():
             logger.info("👤 Usuário não autenticado, redirecionando para login")
             return redirect(url_for('login'))
         
-        logger.info("✅ Usuário autenticado, carregando dashboard")
+        logger.info("✅ Usuário autenticado, carregando dashboard integrado")
         
-        # Estatísticas básicas com tratamento de erro robusto
+        # Estatísticas integradas com tratamento de erro robusto
         total_clientes = 0
         total_produtos = 0
         total_categorias = 0
         total_vendas = 0
+        valor_total_vendas = 0.0
+        produtos_sem_estoque = 0
+        produtos_estoque_baixo = 0
+        estoque_total = 0
         
         try:
             if hasattr(Cliente, 'get_all') and callable(Cliente.get_all):
-                total_clientes = len(Cliente.get_all())
+                clientes_list = Cliente.get_all()
+                total_clientes = len(clientes_list)
+                logger.info(f"✅ Clientes carregados: {total_clientes}")
         except Exception as e:
             logger.warning(f"⚠️ Erro ao carregar clientes: {e}")
             total_clientes = 0
             
         try:
             if hasattr(Produto, 'get_all') and callable(Produto.get_all):
-                total_produtos = len(Produto.get_all())
+                produtos_list = Produto.get_all()
+                total_produtos = len(produtos_list)
+                logger.info(f"✅ Produtos carregados: {total_produtos}")
         except Exception as e:
             logger.warning(f"⚠️ Erro ao carregar produtos: {e}")
             total_produtos = 0
             
         try:
             if hasattr(Categoria, 'get_all') and callable(Categoria.get_all):
-                total_categorias = len(Categoria.get_all())
+                categorias_list = Categoria.get_all()
+                total_categorias = len(categorias_list)
+                logger.info(f"✅ Categorias carregadas: {total_categorias}")
         except Exception as e:
             logger.warning(f"⚠️ Erro ao carregar categorias: {e}")
             total_categorias = 0
             
         try:
             if hasattr(Venda, 'get_all') and callable(Venda.get_all):
-                total_vendas = len(Venda.get_all())
+                vendas_list = Venda.get_all()
+                total_vendas = len(vendas_list)
+                
+                # Calcular valor total das vendas
+                for venda in vendas_list:
+                    if venda.get('status') == 'concluida':
+                        valor_total_vendas += float(venda.get('total', 0))
+                
+                logger.info(f"✅ Vendas carregadas: {total_vendas}, Total: R$ {valor_total_vendas:.2f}")
         except Exception as e:
             logger.warning(f"⚠️ Erro ao carregar vendas: {e}")
             total_vendas = 0
+            valor_total_vendas = 0.0
         
-        # Retornar HTML simples e funcional
+        try:
+            if hasattr(Estoque, 'get_all') and callable(Estoque.get_all):
+                estoque_list = Estoque.get_all()
+                
+                # Calcular estatísticas de estoque
+                for item in estoque_list:
+                    quantidade = item.get('quantidade', 0)
+                    quantidade_minima = item.get('quantidade_minima', 0)
+                    
+                    estoque_total += quantidade
+                    
+                    if quantidade <= 0:
+                        produtos_sem_estoque += 1
+                    elif quantidade <= quantidade_minima:
+                        produtos_estoque_baixo += 1
+                
+                logger.info(f"✅ Estoque analisado: Total {estoque_total}, Sem estoque: {produtos_sem_estoque}, Baixo: {produtos_estoque_baixo}")
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao carregar estoque: {e}")
+            produtos_sem_estoque = 0
+            produtos_estoque_baixo = 0
+            estoque_total = 0
+        
+        # Retornar HTML com estatísticas integradas
         return f"""
         <!DOCTYPE html>
         <html>
@@ -255,7 +301,7 @@ def index():
             <style>
                 * {{ margin: 0; padding: 0; box-sizing: border-box; }}
                 body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }}
-                .container {{ max-width: 1200px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }}
+                .container {{ max-width: 1400px; margin: 0 auto; background: white; border-radius: 15px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); overflow: hidden; }}
                 .header {{ background: #667eea; color: white; padding: 30px; text-align: center; }}
                 .header h1 {{ font-size: 2.5em; margin-bottom: 10px; }}
                 .header p {{ font-size: 1.2em; opacity: 0.9; }}
@@ -263,45 +309,77 @@ def index():
                 .stat-card {{ background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 25px; border-radius: 12px; text-align: center; box-shadow: 0 8px 25px rgba(0,0,0,0.1); }}
                 .stat-card h3 {{ font-size: 1.3em; margin-bottom: 15px; opacity: 0.9; }}
                 .stat-card .number {{ font-size: 3em; font-weight: bold; margin-bottom: 10px; }}
+                .stat-card.warning {{ background: linear-gradient(135deg, #ffc107, #ff8c00); }}
+                .stat-card.danger {{ background: linear-gradient(135deg, #dc3545, #c82333); }}
+                .stat-card.success {{ background: linear-gradient(135deg, #28a745, #20c997); }}
                 .actions {{ padding: 30px; text-align: center; background: #f8f9fa; }}
                 .btn {{ background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; margin: 10px; display: inline-block; font-weight: 600; transition: all 0.3s ease; }}
                 .btn:hover {{ background: #5a6fd8; transform: translateY(-2px); box-shadow: 0 8px 25px rgba(0,0,0,0.2); }}
                 .btn-secondary {{ background: #6c757d; }}
                 .btn-secondary:hover {{ background: #5a6268; }}
+                .btn-warning {{ background: #ffc107; color: #212529; }}
+                .btn-warning:hover {{ background: #e0a800; }}
+                .btn-danger {{ background: #dc3545; }}
+                .btn-danger:hover {{ background: #c82333; }}
                 .logout {{ text-align: right; padding: 20px 30px; background: #f8f9fa; border-top: 1px solid #dee2e6; }}
                 .logout a {{ color: #dc3545; text-decoration: none; font-weight: 600; }}
                 .logout a:hover {{ text-decoration: underline; }}
+                .alert {{ background: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 15px; border-radius: 8px; margin: 20px 30px; }}
+                .alert.warning {{ background: #fff3cd; border-color: #ffeaa7; color: #856404; }}
+                .alert.danger {{ background: #f8d7da; border-color: #f5c6cb; color: #721c24; }}
             </style>
         </head>
         <body>
             <div class="container">
                 <div class="header">
                     <h1>🏠 Sistema Empresarial</h1>
-                    <p>Bem-vindo ao seu painel de controle!</p>
+                    <p>Dashboard Integrado - Controle Total em Tempo Real</p>
                 </div>
                 
                 <div class="stats">
-                    <div class="stat-card">
+                    <div class="stat-card success">
                         <h3>👥 Clientes</h3>
                         <div class="number">{total_clientes}</div>
                         <p>Cadastrados</p>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card success">
                         <h3>📦 Produtos</h3>
                         <div class="number">{total_produtos}</div>
-                        <p>Em estoque</p>
+                        <p>Cadastrados</p>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card success">
                         <h3>🏷️ Categorias</h3>
                         <div class="number">{total_categorias}</div>
                         <p>Ativas</p>
                     </div>
-                    <div class="stat-card">
+                    <div class="stat-card success">
                         <h3>💰 Vendas</h3>
                         <div class="number">{total_vendas}</div>
                         <p>Realizadas</p>
                     </div>
+                    <div class="stat-card success">
+                        <h3>💵 Faturamento</h3>
+                        <div class="number">R$ {valor_total_vendas:.2f}</div>
+                        <p>Total Geral</p>
+                    </div>
+                    <div class="stat-card success">
+                        <h3>📊 Estoque Total</h3>
+                        <div class="number">{estoque_total}</div>
+                        <p>Unidades</p>
+                    </div>
+                    <div class="stat-card warning">
+                        <h3>⚠️ Estoque Baixo</h3>
+                        <div class="number">{produtos_estoque_baixo}</div>
+                        <p>Produtos</p>
+                    </div>
+                    <div class="stat-card danger">
+                        <h3>❌ Sem Estoque</h3>
+                        <div class="number">{produtos_sem_estoque}</div>
+                        <p>Produtos</p>
+                    </div>
                 </div>
+                
+                {f'<div class="alert warning">⚠️ <strong>Atenção:</strong> {produtos_estoque_baixo} produtos com estoque baixo e {produtos_sem_estoque} sem estoque!</div>' if produtos_estoque_baixo > 0 or produtos_sem_estoque > 0 else ''}
                 
                 <div class="actions">
                     <a href="/clientes" class="btn">👥 Gerenciar Clientes</a>
@@ -309,6 +387,7 @@ def index():
                     <a href="/categorias" class="btn">🏷️ Gerenciar Categorias</a>
                     <a href="/vendas" class="btn">💰 Gerenciar Vendas</a>
                     <a href="/estoque" class="btn">📊 Controle de Estoque</a>
+                    <a href="/relatorios" class="btn">📈 Relatórios</a>
                 </div>
                 
                 <div class="logout">
@@ -781,8 +860,10 @@ def excluir_categoria(id):
 @app.route('/produtos')
 @login_required
 def produtos():
-    """Lista de produtos"""
+    """Lista de produtos com estoque integrado"""
     try:
+        logger.info("📦 Carregando produtos com estoque integrado")
+        
         produtos_list = Produto.get_all()
         categorias_list = Categoria.get_all()
         estoque_list = Estoque.get_all()
@@ -816,27 +897,58 @@ def produtos():
                 produto['quantidade'] = estoque_info.get('quantidade', 0)
                 produto['quantidade_minima'] = estoque_info.get('quantidade_minima', 0)
                 produto['localizacao'] = estoque_info.get('localizacao', '')
+                
+                # Calcular status do estoque
+                quantidade = estoque_info.get('quantidade', 0)
+                quantidade_minima = estoque_info.get('quantidade_minima', 0)
+                
+                if quantidade <= 0:
+                    produto['status_estoque'] = 'sem_estoque'
+                    produto['status_texto'] = 'Sem Estoque'
+                    produto['status_cor'] = 'danger'
+                    produto['status_icone'] = 'bi-x-circle'
+                elif quantidade <= quantidade_minima:
+                    produto['status_estoque'] = 'estoque_baixo'
+                    produto['status_texto'] = 'Estoque Baixo'
+                    produto['status_cor'] = 'warning'
+                    produto['status_icone'] = 'bi-exclamation-triangle'
+                elif quantidade <= quantidade_minima * 2:
+                    produto['status_estoque'] = 'atencao'
+                    produto['status_texto'] = 'Atenção'
+                    produto['status_cor'] = 'info'
+                    produto['status_icone'] = 'bi-info-circle'
+                else:
+                    produto['status_estoque'] = 'ok'
+                    produto['status_texto'] = 'OK'
+                    produto['status_cor'] = 'success'
+                    produto['status_icone'] = 'bi-check-circle'
             else:
                 # Produto não tem registro de estoque - usar valores padrão
                 produto['quantidade'] = 0
                 produto['quantidade_minima'] = 0
                 produto['localizacao'] = ''
+                produto['status_estoque'] = 'sem_estoque'
+                produto['status_texto'] = 'Sem Estoque'
+                produto['status_cor'] = 'danger'
+                produto['status_icone'] = 'bi-x-circle'
             
             produtos_processados.append(produto)
         
-        logger.info(f"✅ Produtos processados: {len(produtos_processados)} itens")
+        logger.info(f"✅ Produtos processados com estoque: {len(produtos_processados)} itens")
         return render_template('produtos.html', produtos=produtos_processados, categorias=categorias_list)
     except Exception as e:
-        logger.error(f"Erro ao carregar produtos: {e}")
+        logger.error(f"❌ Erro ao carregar produtos: {e}")
         flash(f'Erro ao carregar produtos: {e}', 'error')
         return render_template('produtos.html', produtos=[], categorias=[])
 
 @app.route('/produto/novo', methods=['GET', 'POST'])
 @login_required
 def novo_produto():
-    """Novo produto"""
+    """Novo produto com estoque automático"""
     if request.method == 'POST':
         try:
+            logger.info("📦 Criando novo produto com estoque automático")
+            
             # Processar upload de imagem
             imagem_filename = None
             if 'imagem' in request.files:
@@ -844,6 +956,7 @@ def novo_produto():
                 if file and file.filename:
                     imagem_filename = save_image(file)
             
+            # Dados do produto
             produto_data = {
                 'nome': request.form['nome'],
                 'descricao': request.form['descricao'],
@@ -856,6 +969,8 @@ def novo_produto():
             # Criar produto primeiro
             produto_criado = Produto.create(**produto_data)
             if produto_criado:
+                logger.info(f"✅ Produto criado com ID: {produto_criado['id']}")
+                
                 # Criar registro de estoque automaticamente
                 estoque_data = {
                     'produto_id': produto_criado['id'],
@@ -865,15 +980,18 @@ def novo_produto():
                 }
                 
                 if Estoque.create(**estoque_data):
-                    flash('Produto e estoque criados com sucesso!', 'success')
+                    logger.info(f"✅ Estoque criado para produto {produto_criado['id']}")
+                    flash(f'Produto "{produto_criado["nome"]}" e estoque criados com sucesso! Quantidade inicial: {estoque_data["quantidade"]}', 'success')
                 else:
-                    flash('Produto criado, mas erro ao criar estoque!', 'warning')
+                    logger.warning(f"⚠️ Produto criado mas erro ao criar estoque")
+                    flash(f'Produto "{produto_criado["nome"]}" criado, mas erro ao criar estoque!', 'warning')
                 
                 return redirect(url_for('produtos'))
             else:
+                logger.error("❌ Falha ao criar produto")
                 flash('Erro ao criar produto!', 'error')
         except Exception as e:
-            logger.error(f"Erro ao criar produto: {e}")
+            logger.error(f"❌ Erro ao criar produto: {e}")
             flash(f'Erro ao criar produto: {e}', 'error')
     
     try:
@@ -1066,16 +1184,19 @@ def excluir_produto(id):
 @app.route('/estoque')
 @login_required
 def estoque():
-    """Lista de estoque"""
+    """Lista de estoque com informações integradas"""
     try:
-        logger.info("📊 Acessando rota de estoque")
+        logger.info("📊 Acessando rota de estoque integrada")
         
         # Buscar produtos e estoque separadamente
         try:
             produtos_list = Produto.get_all()
             estoque_list = Estoque.get_all()
+            vendas_list = Venda.get_all()
+            
             logger.info(f"✅ Produtos carregados: {len(produtos_list)} itens")
             logger.info(f"✅ Estoque carregado: {len(estoque_list)} itens")
+            logger.info(f"✅ Vendas carregadas: {len(vendas_list)} itens")
             
             # Criar um dicionário de estoque por produto_id para busca rápida
             estoque_por_produto = {}
@@ -1083,6 +1204,24 @@ def estoque():
                 produto_id = item_estoque.get('produto_id')
                 if produto_id:
                     estoque_por_produto[produto_id] = item_estoque
+            
+            # Calcular estatísticas de vendas por produto
+            vendas_por_produto = {}
+            for venda in vendas_list:
+                if venda.get('status') == 'concluida':
+                    # Buscar itens da venda
+                    try:
+                        itens_venda = ItemVenda.get_all()
+                        for item in itens_venda:
+                            if item.get('venda_id') == venda.get('id'):
+                                produto_id = item.get('produto_id')
+                                quantidade = item.get('quantidade', 0)
+                                if produto_id:
+                                    if produto_id not in vendas_por_produto:
+                                        vendas_por_produto[produto_id] = 0
+                                    vendas_por_produto[produto_id] += quantidade
+                    except:
+                        pass
             
             # Buscar categorias para cada produto e combinar com estoque
             estoque_items = []
@@ -1116,6 +1255,35 @@ def estoque():
                         'data_atualizacao': produto.get('updated_at', produto.get('created_at', datetime.now()))
                     }
                 
+                # Adicionar informações de vendas
+                vendas_produto = vendas_por_produto.get(produto.get('id'), 0)
+                estoque_item['vendas_realizadas'] = vendas_produto
+                
+                # Calcular status do estoque
+                quantidade = estoque_item['quantidade']
+                quantidade_minima = estoque_item['quantidade_minima']
+                
+                if quantidade <= 0:
+                    estoque_item['status'] = 'sem_estoque'
+                    estoque_item['status_texto'] = 'Sem Estoque'
+                    estoque_item['status_cor'] = 'danger'
+                    estoque_item['status_icone'] = 'bi-x-circle'
+                elif quantidade <= quantidade_minima:
+                    estoque_item['status'] = 'estoque_baixo'
+                    estoque_item['status_texto'] = 'Estoque Baixo'
+                    estoque_item['status_cor'] = 'warning'
+                    estoque_item['status_icone'] = 'bi-exclamation-triangle'
+                elif quantidade <= quantidade_minima * 2:
+                    estoque_item['status'] = 'atencao'
+                    estoque_item['status_texto'] = 'Atenção'
+                    estoque_item['status_cor'] = 'info'
+                    estoque_item['status_icone'] = 'bi-info-circle'
+                else:
+                    estoque_item['status'] = 'ok'
+                    estoque_item['status_texto'] = 'OK'
+                    estoque_item['status_cor'] = 'success'
+                    estoque_item['status_icone'] = 'bi-check-circle'
+                
                 # Converter string de data para objeto datetime se necessário
                 if isinstance(estoque_item['data_atualizacao'], str):
                     try:
@@ -1125,7 +1293,20 @@ def estoque():
                 
                 estoque_items.append((produto, estoque_item, categoria or {'nome': 'Sem categoria', 'cor': '#6c757d', 'icone': 'bi-tag'}))
             
-            logger.info(f"📊 Estoque processado: {len(estoque_items)} itens")
+            # Ordenar por status de estoque (críticos primeiro)
+            def ordenar_por_status(item):
+                produto, estoque, categoria = item
+                status_prioridade = {
+                    'sem_estoque': 0,
+                    'estoque_baixo': 1,
+                    'atencao': 2,
+                    'ok': 3
+                }
+                return status_prioridade.get(estoque.get('status', 'ok'), 3)
+            
+            estoque_items.sort(key=ordenar_por_status)
+            
+            logger.info(f"📊 Estoque processado com informações integradas: {len(estoque_items)} itens")
             
         except Exception as e:
             logger.warning(f"⚠️ Erro ao carregar produtos/estoque: {e}")
@@ -1379,28 +1560,145 @@ def vendas():
 @app.route('/venda/nova', methods=['GET', 'POST'])
 @login_required
 def nova_venda():
-    """Nova venda"""
+    """Nova venda com controle automático de estoque"""
     if request.method == 'POST':
         try:
+            logger.info("💰 Criando nova venda com controle automático de estoque")
+            
+            # Dados da venda
+            cliente_id = request.form.get('cliente_id')
+            produtos_vendidos = request.form.getlist('produto_id[]')
+            quantidades = request.form.getlist('quantidade[]')
+            precos_unitarios = request.form.getlist('preco_unitario[]')
+            
+            if not produtos_vendidos:
+                flash('Selecione pelo menos um produto!', 'error')
+                return redirect(url_for('nova_venda'))
+            
+            # Validar estoque antes de criar a venda
+            estoque_insuficiente = []
+            total_venda = 0.0
+            
+            for i, produto_id in enumerate(produtos_vendidos):
+                quantidade = int(quantidades[i])
+                preco_unitario = float(precos_unitarios[i])
+                
+                # Verificar estoque disponível
+                estoque_info = None
+                try:
+                    estoque_list = Estoque.get_all()
+                    for item in estoque_list:
+                        if item.get('produto_id') == produto_id:
+                            estoque_info = item
+                            break
+                except:
+                    pass
+                
+                if not estoque_info or estoque_info.get('quantidade', 0) < quantidade:
+                    produto = Produto.get_by_id(produto_id)
+                    nome_produto = produto.get('nome', 'Produto desconhecido') if produto else 'Produto desconhecido'
+                    estoque_disponivel = estoque_info.get('quantidade', 0) if estoque_info else 0
+                    estoque_insuficiente.append({
+                        'nome': nome_produto,
+                        'solicitado': quantidade,
+                        'disponivel': estoque_disponivel
+                    })
+                
+                total_venda += quantidade * preco_unitario
+            
+            # Se há estoque insuficiente, mostrar erro
+            if estoque_insuficiente:
+                mensagem_erro = "Estoque insuficiente para os seguintes produtos:\n"
+                for item in estoque_insuficiente:
+                    mensagem_erro += f"• {item['nome']}: Solicitado {item['solicitado']}, Disponível {item['disponivel']}\n"
+                flash(mensagem_erro, 'error')
+                return redirect(url_for('nova_venda'))
+            
+            # Criar a venda principal
             venda_data = {
-                'cliente_id': request.form['cliente_id'],
+                'cliente_id': cliente_id if cliente_id != 'none' else None,
                 'data_venda': datetime.now().isoformat(),
-                'total': float(request.form['total']),
-                'status': 'concluida'
+                'total': total_venda,
+                'status': 'concluida',
+                'tipo': 'venda_normal'
             }
             
-            if Venda.create(**venda_data):
-                flash('Venda criada com sucesso!', 'success')
+            venda_criada = Venda.create(**venda_data)
+            if venda_criada:
+                logger.info(f"✅ Venda criada com ID: {venda_criada['id']}")
+                
+                # Atualizar estoque e criar itens de venda
+                estoque_atualizado = True
+                for i, produto_id in enumerate(produtos_vendidos):
+                    quantidade = int(quantidades[i])
+                    preco_unitario = float(precos_unitarios[i])
+                    
+                    # Buscar estoque do produto
+                    estoque_info = None
+                    for item in estoque_list:
+                        if item.get('produto_id') == produto_id:
+                            estoque_info = item
+                            break
+                    
+                    if estoque_info:
+                        # Atualizar estoque
+                        nova_quantidade = estoque_info.get('quantidade', 0) - quantidade
+                        estoque_data = {'quantidade': nova_quantidade}
+                        
+                        if Estoque.update(estoque_info['id'], **estoque_data):
+                            logger.info(f"✅ Estoque do produto {produto_id} atualizado: {estoque_info.get('quantidade', 0)} → {nova_quantidade}")
+                        else:
+                            logger.warning(f"⚠️ Falha ao atualizar estoque do produto {produto_id}")
+                            estoque_atualizado = False
+                        
+                        # Criar item de venda
+                        item_venda_data = {
+                            'venda_id': venda_criada['id'],
+                            'produto_id': produto_id,
+                            'quantidade': quantidade,
+                            'preco_unitario': preco_unitario,
+                            'subtotal': quantidade * preco_unitario
+                        }
+                        
+                        if ItemVenda.create(**item_venda_data):
+                            logger.info(f"✅ Item de venda criado para produto {produto_id}")
+                        else:
+                            logger.warning(f"⚠️ Falha ao criar item de venda para produto {produto_id}")
+                
+                if estoque_atualizado:
+                    flash(f'Venda criada com sucesso! Total: R$ {total_venda:.2f}. Estoque atualizado automaticamente.', 'success')
+                else:
+                    flash(f'Venda criada com sucesso! Total: R$ {total_venda:.2f}. Mas houve problemas ao atualizar o estoque.', 'warning')
+                
                 return redirect(url_for('vendas'))
             else:
                 flash('Erro ao criar venda!', 'error')
+                
         except Exception as e:
-            logger.error(f"Erro ao criar venda: {e}")
+            logger.error(f"❌ Erro ao criar venda: {e}")
             flash(f'Erro ao criar venda: {e}', 'error')
     
     try:
         clientes_list = Cliente.get_all()
         produtos_list = Produto.get_all()
+        
+        # Adicionar informações de estoque aos produtos
+        estoque_list = Estoque.get_all()
+        estoque_por_produto = {}
+        for item in estoque_list:
+            produto_id = item.get('produto_id')
+            if produto_id:
+                estoque_por_produto[produto_id] = item
+        
+        for produto in produtos_list:
+            estoque_info = estoque_por_produto.get(produto.get('id'))
+            if estoque_info:
+                produto['estoque_disponivel'] = estoque_info.get('quantidade', 0)
+                produto['estoque_minimo'] = estoque_info.get('quantidade_minima', 0)
+            else:
+                produto['estoque_disponivel'] = 0
+                produto['estoque_minimo'] = 0
+        
         return render_template('venda_form.html', clientes=clientes_list, produtos=produtos_list)
     except Exception as e:
         logger.error(f"Erro ao carregar dados para venda: {e}")
@@ -1656,6 +1954,76 @@ def teste_sessao():
     except Exception as e:
         logger.error(f"❌ Erro no teste de sessão: {e}")
         return f"Erro no teste de sessão: {e}"
+
+# Rotas de Usuário
+@app.route('/criar-usuario-erick')
+def criar_usuario_erick():
+    """Cria o usuário erick com privilégios de admin máximo"""
+    try:
+        logger.info("👤 Criando usuário erick com privilégios de admin máximo")
+        
+        # Verificar se o usuário já existe
+        try:
+            usuarios_existentes = Usuario.get_all()
+            for usuario in usuarios_existentes:
+                if usuario.get('username') == 'erick':
+                    logger.info("✅ Usuário erick já existe no sistema")
+                    return f"""
+                    <h2>Usuário Erick já existe!</h2>
+                    <p><strong>Username:</strong> erick</p>
+                    <p><strong>Senha:</strong> 21324354</p>
+                    <p><strong>Tipo:</strong> Admin Máximo</p>
+                    <p><strong>Status:</strong> Ativo</p>
+                    <br>
+                    <p><a href="/login">Ir para Login</a></p>
+                    """
+        except Exception as e:
+            logger.warning(f"⚠️ Erro ao verificar usuários existentes: {e}")
+        
+        # Dados do usuário erick
+        usuario_erick = {
+            'username': 'erick',
+            'password': '21324354',
+            'nome': 'Erick Finger',
+            'email': 'erick@sistema.com',
+            'tipo': 'admin_maximo',  # Tipo especial para admin máximo
+            'ativo': True,
+            'permissoes_especiais': True,
+            'acesso_total': True
+        }
+        
+        # Tentar criar o usuário
+        if Usuario.create(**usuario_erick):
+            logger.info("✅ Usuário erick criado com sucesso!")
+            
+            return f"""
+            <h2>✅ Usuário Erick criado com sucesso!</h2>
+            <p><strong>Username:</strong> erick</p>
+            <p><strong>Senha:</strong> 21324354</p>
+            <p><strong>Tipo:</strong> Admin Máximo</p>
+            <p><strong>Status:</strong> Ativo</p>
+            <p><strong>Privilégios:</strong> Acesso total ao sistema</p>
+            <br>
+            <p><a href="/login">Ir para Login</a></p>
+            <p><small>⚠️ Guarde essas credenciais em local seguro!</small></p>
+            """
+        else:
+            logger.error("❌ Falha ao criar usuário erick")
+            return """
+            <h2>❌ Erro ao criar usuário</h2>
+            <p>Não foi possível criar o usuário erick. Verifique os logs do sistema.</p>
+            <br>
+            <p><a href="/">Voltar ao início</a></p>
+            """
+            
+    except Exception as e:
+        logger.error(f"❌ Erro crítico ao criar usuário erick: {e}")
+        return f"""
+        <h2>❌ Erro crítico</h2>
+        <p>Erro ao criar usuário: {e}</p>
+        <br>
+        <p><a href="/">Voltar ao início</a></p>
+        """
 
 if __name__ == '__main__':
     logger.info("🚀 Iniciando Sistema Empresarial - VERSÃO PRODUÇÃO")
