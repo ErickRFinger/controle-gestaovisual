@@ -5,7 +5,7 @@ Cliente Supabase para o Sistema Empresarial
 """
 
 from supabase import create_client, Client
-from config_supabase import config
+from config_producao import config
 import logging
 
 # Configurar logging
