@@ -39,8 +39,12 @@ login_manager.init_app(app)
 login_manager.login_view = 'login'
 login_manager.login_message = 'Por favor, faça login para acessar esta página.'
 
-# Configurar sessão de forma mais simples
+# Configurar sessão de forma mais robusta
 app.config['PERMANENT_SESSION_LIFETIME'] = 1800  # 30 minutos
+app.config['SESSION_COOKIE_SECURE'] = False  # Render pode não ter HTTPS
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['SESSION_REFRESH_EACH_REQUEST'] = True
 
 # Variável global para controlar disponibilidade do Supabase
 SUPABASE_AVAILABLE = False
@@ -438,6 +442,9 @@ def debug():
                     <p><strong>Flask:</strong> ✅ Funcionando</p>
                     <p><strong>Supabase:</strong> {'✅ Disponível' if SUPABASE_AVAILABLE else '❌ Não disponível'}</p>
                     <p><strong>Usuário atual:</strong> {current_user.is_authenticated if current_user else 'Não logado'}</p>
+                    <p><strong>ID do usuário:</strong> {current_user.get_id() if current_user else 'N/A'}</p>
+                    <p><strong>Username:</strong> {getattr(current_user, 'username', 'N/A') if current_user else 'N/A'}</p>
+                    <p><strong>Sessão ativa:</strong> {session.get('_user_id', 'N/A')}</p>
                     <p><strong>Timestamp:</strong> {datetime.now()}</p>
                     <p><strong>Porta:</strong> {os.environ.get('PORT', '5000')}</p>
                 </div>
@@ -457,6 +464,7 @@ def debug():
                 <div style="text-align: center; margin-top: 30px;">
                     <a href="/" class="btn">← Voltar para Dashboard</a>
                     <a href="/teste" class="btn">🧪 Teste</a>
+                    <a href="/logout" class="btn">🚪 Logout</a>
                 </div>
             </div>
         </body>
@@ -1127,6 +1135,70 @@ def api_status():
             'error': str(e),
             'timestamp': str(datetime.now())
         }), 500
+
+@app.route('/teste-sessao')
+def teste_sessao():
+    """Rota para testar a sessão e autenticação"""
+    logger.info("🧪 Testando sessão e autenticação")
+    
+    try:
+        # Verificar status da sessão
+        session_info = {
+            'session_id': session.get('_user_id', 'N/A'),
+            'current_user': str(current_user) if current_user else 'None',
+            'is_authenticated': current_user.is_authenticated if current_user else False,
+            'user_id': current_user.get_id() if current_user else 'N/A',
+            'username': getattr(current_user, 'username', 'N/A') if current_user else 'N/A'
+        }
+        
+        logger.info(f"📊 Informações da sessão: {session_info}")
+        
+        return f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Teste de Sessão - Sistema Empresarial</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <style>
+                * {{ margin: 0; padding: 0; box-sizing: border-box; }}
+                body {{ font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; color: white; }}
+                .container {{ max-width: 600px; margin: 0 auto; background: rgba(255,255,255,0.1); padding: 40px; border-radius: 20px; backdrop-filter: blur(10px); text-align: center; }}
+                h1 {{ font-size: 2.5em; margin-bottom: 30px; }}
+                .status {{ background: rgba(255,255,255,0.2); padding: 25px; border-radius: 15px; margin: 30px 0; text-align: left; }}
+                .status h3 {{ margin-bottom: 20px; text-align: center; }}
+                .status p {{ margin: 10px 0; padding: 8px; background: rgba(255,255,255,0.1); border-radius: 8px; }}
+                .btn {{ background: rgba(255,255,255,0.2); color: white; padding: 15px 30px; text-decoration: none; border-radius: 10px; margin: 15px; display: inline-block; font-weight: 600; }}
+                .btn:hover {{ background: rgba(255,255,255,0.3); }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <h1>🧪 Teste de Sessão</h1>
+                
+                <div class="status">
+                    <h3>📊 Status da Sessão:</h3>
+                    <p><strong>Session ID:</strong> {session_info['session_id']}</p>
+                    <p><strong>Current User:</strong> {session_info['current_user']}</p>
+                    <p><strong>Is Authenticated:</strong> {session_info['is_authenticated']}</p>
+                    <p><strong>User ID:</strong> {session_info['user_id']}</p>
+                    <p><strong>Username:</strong> {session_info['username']}</p>
+                </div>
+                
+                <div style="margin-top: 30px;">
+                    <a href="/login" class="btn">🔐 Fazer Login</a>
+                    <a href="/" class="btn">🏠 Dashboard</a>
+                    <a href="/debug" class="btn">🔍 Debug</a>
+                    <a href="/logout" class="btn">🚪 Logout</a>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+    except Exception as e:
+        logger.error(f"❌ Erro no teste de sessão: {e}")
+        return f"Erro no teste de sessão: {e}"
 
 if __name__ == '__main__':
     logger.info("🚀 Iniciando Sistema Empresarial - VERSÃO PRODUÇÃO")
