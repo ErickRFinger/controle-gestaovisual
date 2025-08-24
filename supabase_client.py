@@ -42,9 +42,18 @@ class SupabaseManager:
     
     def get_table(self, table_name: str):
         """Retorna uma referência para uma tabela"""
-        if self.client:
-            return self.client.table(table_name)
-        return None
+        try:
+            if self.client:
+                logger.info(f"🔍 Obtendo tabela: {table_name}")
+                table = self.client.table(table_name)
+                logger.info(f"✅ Tabela {table_name} obtida com sucesso")
+                return table
+            else:
+                logger.error(f"❌ Cliente Supabase não disponível")
+                return None
+        except Exception as e:
+            logger.error(f"❌ Erro ao obter tabela {table_name}: {e}")
+            return None
 
 # Instância global
 supabase = SupabaseManager()
